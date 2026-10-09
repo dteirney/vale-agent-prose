@@ -7,5 +7,15 @@
   },
   "repository": "https://github.com/dteirney/vale-agent-prose",
   "license": "MIT",
-  "keywords": ["vale", "prose", "linter", "agent", "slop"]
+  "keywords": [
+    "vale",
+    "prose",
+    "linter",
+    "agent",
+    "slop",
+    "ai-slop",
+    "claude-code",
+    "llm",
+    "commit-message"
+  ]
 }
