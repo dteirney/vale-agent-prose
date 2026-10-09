@@ -140,7 +140,12 @@ check_spelling() {
 }
 
 check_package() {
-  if bats "${ROOT}/tests"; then
+  local jobs rush
+  jobs="$(getconf _NPROCESSORS_ONLN)" || jobs=1
+  # A mise shim rebuilds PATH without the folder of the command each job runs,
+  # so every job fails to start. The real binary keeps PATH.
+  rush="$(mise which rush 2>/dev/null)" || rush="$(command -v rush)"
+  if bats --jobs "${jobs}" --parallel-binary-name "${rush}" "${ROOT}/tests"; then
     record bats ok
   else
     record bats failed
@@ -175,7 +180,9 @@ main() {
   command -v jq >/dev/null || die 'jq is required'
   command -v vale >/dev/null || die 'vale is required'
   command -v bats >/dev/null || die 'bats is required'
+  command -v rush >/dev/null || die 'rush is required'
   command -v cspell >/dev/null || die 'cspell is required'
+  command -v commitlint >/dev/null || die 'commitlint is required'
   command -v claude >/dev/null || die 'claude is required'
 
   collect

@@ -5,6 +5,8 @@
 # it must not, so a stripper that removed the whole message would fail too.
 
 setup_file() {
+  # Every test writes its message to the same file.
+  export BATS_NO_PARALLELIZE_WITHIN_FILE=true
   REPO="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
   export REPO
   CONSUMER="$(mktemp -d)"

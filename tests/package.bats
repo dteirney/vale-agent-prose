@@ -8,6 +8,8 @@
 # the network.
 
 setup_file() {
+  # Every test writes its probe to the same few file names.
+  export BATS_NO_PARALLELIZE_WITHIN_FILE=true
   REPO="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
   export REPO
   CONSUMER="$(mktemp -d)"
@@ -183,6 +185,27 @@ count_at() {
   grep -c "^[^:]*:$3:[0-9]*:$2" <<<"$1" || true
 }
 
+# Write the probe for extension $1, or fail for an extension the marker table
+# doesn't know.
+write_probe() {
+  local ext="$1" marker
+  if [[ "${ext}" == css ]]; then
+    printf '%s\n' '/* Here we simply do not stop. */' 'a { content: "we simply do not"; }' \
+      "/* ${LONG_FIRST}" "   ${LONG_SECOND} */" >"${CONSUMER}/probe.${ext}"
+    return 0
+  fi
+  marker="$(comment_marker "${ext}")"
+  [[ -n "${marker}" ]] || return 1
+  {
+    # PHP reads nothing before its opening tag.
+    if [[ "${ext}" == php ]]; then
+      printf '<?php\n'
+    fi
+    printf '%s\n' "${marker} Here we simply do not stop." 'x = "we simply do not"' \
+      "${marker} ${LONG_FIRST}" "${marker} ${LONG_SECOND}"
+  } >"${CONSUMER}/probe.${ext}"
+}
+
 # Each extension the package lints as source gets one probe: a comment the
 # rules must report once, a string literal they must leave alone, and a
 # sentence wrapped over two comment lines that must arrive as one sentence.
@@ -193,27 +216,31 @@ count_at() {
   exts="$(sed -n 's/^\[\*\.{\{0,1\}\([^]}]*\)}\{0,1\}\]$/\1/p' "${REPO}/package/.vale.ini" | tr ',' '\n')"
   [[ -n "${exts}" ]]
 
-  local ext marker header out failures=''
+  local ext header all out failures=''
+  local -a files=()
   while IFS= read -r ext; do
     case "${ext}" in md | txt | html) continue ;; esac
-    if [[ "${ext}" == css ]]; then
-      out="$(lint_source "probe.${ext}" '/* Here we simply do not stop. */' \
-        'a { content: "we simply do not"; }' "/* ${LONG_FIRST}" "   ${LONG_SECOND} */")"
-      header=0
+    if write_probe "${ext}"; then
+      files+=("${CONSUMER}/probe.${ext}")
     else
-      marker="$(comment_marker "${ext}")"
-      [[ -n "${marker}" ]] || { failures+=" ${ext}(no marker)"; continue; }
-      local -a lines=()
-      header=0
-      # PHP reads nothing before its opening tag.
-      if [[ "${ext}" == php ]]; then
-        lines+=('<?php')
-        header=1
-      fi
-      lines+=("${marker} Here we simply do not stop." 'x = "we simply do not"' \
-        "${marker} ${LONG_FIRST}" "${marker} ${LONG_SECOND}")
-      out="$(lint_source "probe.${ext}" "${lines[@]}")"
+      failures+=" ${ext}(no marker)"
     fi
+  done <<<"${exts}"
+  [[ "${#files[@]}" -gt 0 ]]
+
+  # One run, because each Vale start reloads every package. A run that Vale
+  # aborts fails every extension at once.
+  all="$(vale --no-global --config="${CONSUMER}/.vale.ini" --output=line \
+    "${files[@]}" 2>&1)" || true
+
+  local file
+  for file in "${files[@]}"; do
+    ext="${file##*.}"
+    header=0
+    if [[ "${ext}" == php ]]; then
+      header=1
+    fi
+    out="$(grep -F "/probe.${ext}:" <<<"${all}")" || out=''
 
     [[ "$(count_at "${out}" AiTells.Adverb $((header + 1)))" -eq 1 ]] || failures+=" ${ext}(comment)"
     [[ "$(count_at "${out}" AiTells.Adverb $((header + 2)))" -eq 0 ]] || failures+=" ${ext}(string)"
@@ -222,7 +249,7 @@ count_at() {
     case "${ext}" in clj | cljc | cljd | cljs | ps1 | psd1 | psm1) continue ;; esac
     [[ "$(count_at "${out}" Std.Readability.SentenceLength $((header + 3)))" -eq 1 ]] \
       || failures+=" ${ext}(wrapped)"
-  done <<<"${exts}"
+  done
 
   [[ -z "${failures}" ]] || { printf 'failed:%s\n' "${failures}"; return 1; }
 }
