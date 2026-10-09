@@ -20,8 +20,8 @@ usage() {
 usage: ${PROG} [--fix]
        ${PROG} -h
 
-Run every check this repository gates on: shell, formatting, JSON, the plugin
-manifest, spelling, and the tests.
+Run every check this repository gates on: shell, formatting, JSON, the
+workflows, the plugin manifest, spelling, and the tests.
 
   --fix        apply shfmt's and prettier's formatting before reporting
   -h, --help   print this and exit
@@ -130,6 +130,14 @@ check_json() {
   fi
 }
 
+check_workflows() {
+  if (cd "${ROOT}" && actionlint); then
+    record actionlint ok
+  else
+    record actionlint failed
+  fi
+}
+
 # --strict, because without it a manifest warning passes and the plugin still
 # ships with it.
 check_plugin() {
@@ -190,6 +198,7 @@ main() {
 
   command -v shfmt >/dev/null || die 'shfmt is required'
   command -v jq >/dev/null || die 'jq is required'
+  command -v actionlint >/dev/null || die 'actionlint is required'
   command -v vale >/dev/null || die 'vale is required'
   command -v bats >/dev/null || die 'bats is required'
   command -v rush >/dev/null || die 'rush is required'
@@ -205,6 +214,7 @@ main() {
   check_prettier
   check_parse
   check_json
+  check_workflows
   check_plugin
   check_spelling
   check_package
