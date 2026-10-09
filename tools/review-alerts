@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+#
+# Rank the rules whose alerts the agent leaves standing, from the recheck
+# lines the prose hook leaves in every session transcript on this machine.
+#
+#   tools/review-alerts
+#   tools/review-alerts --limit 20
+set -euo pipefail
+IFS=$'\n\t'
+
+readonly PROG="${0##*/}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+
+# shellcheck source=lib/prose.sh
+source "${SCRIPT_DIR}/../lib/prose.sh"
+
+# Below this, one persisted alert could put a rule at the top.
+readonly MIN_RECHECKS=5
+readonly DEFAULT_LIMIT=10
+
+usage() {
+  cat <<EOF
+usage: ${PROG} [--limit <n>]
+       ${PROG} -h
+
+Rank rules by how often their alerts persist, from the rechecks the prose hook
+left in every session transcript under ${CLAUDE_CONFIG_DIR:-~/.claude}/projects.
+Only rechecks from this version of the plugin count, and a rule needs
+${MIN_RECHECKS} of them to rank. Each rule prints its persistence rate, then its
+persisted alerts with their lines.
+
+  --limit <n>    print at most <n> rules, 0 for all (default ${DEFAULT_LIMIT})
+  -h, --help     print this and exit
+
+Exit 0 when it reports, 1 when it finds no rechecks, 2 on a usage error.
+EOF
+}
+
+usage_error() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  usage >&2
+  exit 2
+}
+
+die() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  exit 1
+}
+
+# Print each recheck line the prose hook left in the transcripts under $1, from
+# plugin version $2. A subagent's transcript sits in a folder below its parent's.
+read_rechecks() {
+  # The transcripts run to gigabytes, so grep picks the lines before jq parses
+  # any. The stderr is a JSON string inside the record, so its quotes arrive
+  # escaped. grep exits 1 for a batch of transcripts with no recheck in it.
+  local lines
+  lines="$(find "$1" -type f -name '*.jsonl' \
+    -exec grep -hF '\"recheck\":' {} +)" || true
+  [[ -n "${lines}" ]] || return 0
+
+  jq -R -c --arg version "$2" '
+    fromjson? | .attachment? | objects
+    | select(.type == "hook_success"
+      and (.command | strings | endswith("/scripts/lint-prose.sh")))
+    | .stderr | strings | split("\n")[] | fromjson? | objects
+    | select(.version == $version
+      and (.recheck == "persisted" or .recheck == "absent"))
+  ' <<<"${lines}"
+}
+
+# Print one JSON line per rule with enough rechecks to rank, highest
+# persistence rate first, from the recheck lines on stdin. A rule's alerts
+# are its persisted ones, each alert once with the times it persisted.
+rank() {
+  jq -s -c --argjson min_rechecks "${MIN_RECHECKS}" '
+    group_by(.rule)
+    | map(map(select(.recheck == "persisted")) as $persisted
+      | {rule: .[0].rule, rechecks: length, persisted: ($persisted | length),
+        alerts: ($persisted | group_by([.file, .message, .lines])
+          | map(.[0] + {times: length})
+          | sort_by(-.times, .file, .lines[0].line))})
+    | map(select(.rechecks >= $min_rechecks))
+    | sort_by(-(.persisted / .rechecks), -.rechecks, .rule)
+    | .[]'
+}
+
+# Print one rule from rank: its persistence rate, then each persisted alert
+# with its lines.
+print_rule() {
+  local fields name persisted rechecks rate
+  fields="$(jq -r '[.rule, .persisted, .rechecks,
+    (.persisted * 100 / .rechecks | round)] | @tsv' <<<"$1")" || return 1
+  IFS=$'\t' read -r name persisted rechecks rate <<<"${fields}"
+  # shellcheck disable=SC2310  # the caller exits on any failure
+  prose::message review-alerts/rule "${name}" "${persisted}" "${rechecks}" \
+    "${rate}" || return 1
+  jq -r '.alerts[]
+    | "",
+      "  \(.file)\(if .times > 1 then " (persisted \(.times) times)" else "" end)",
+      "  \(.message)",
+      (.lines[] | "    \(.line) |" + (if .text == "" then "" else " \(.text)" end))
+  ' <<<"$1" || return 1
+  printf '\n'
+}
+
+# Print the ranked rules in $1, at most $2 of them where $2 isn't 0.
+print_rules() {
+  local rule shown=0 total
+  total="$(wc -l <<<"$1")"
+  total="${total// /}"
+  while IFS= read -r rule; do
+    if [[ "$2" -ne 0 && "${shown}" -ge "$2" ]]; then
+      prose::message review-alerts/more-rules "$((total - shown))"
+      return 0
+    fi
+    # shellcheck disable=SC2310  # its failures exit here
+    print_rule "${rule}" || die 'cannot print a rule'
+    shown=$((shown + 1))
+  done <<<"$1"
+}
+
+main() {
+  local limit="${DEFAULT_LIMIT}"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
+        return 0
+        ;;
+      --limit)
+        [[ $# -ge 2 ]] || usage_error '--limit needs a count'
+        [[ "$2" =~ ^[0-9]+$ ]] || usage_error "--limit wants a number, got '$2'"
+        limit="$2"
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      -*) usage_error "unknown option '$1'" ;;
+      *) break ;;
+    esac
+    shift
+  done
+  [[ $# -eq 0 ]] || usage_error "expected no operands, got $#"
+
+  command -v jq >/dev/null || die 'jq is required'
+
+  local version
+  version="$(jq -r .version "${SCRIPT_DIR}/../.claude-plugin/plugin.json")" \
+    || die 'cannot read the plugin version'
+
+  local projects="${CLAUDE_CONFIG_DIR:-${HOME}/.claude}/projects"
+  local rechecks=''
+  if [[ -d "${projects}" ]]; then
+    # shellcheck disable=SC2310  # its failures exit here
+    rechecks="$(read_rechecks "${projects}" "${version}")" \
+      || die "cannot read the transcripts under ${projects}"
+  fi
+  if [[ -z "${rechecks}" ]]; then
+    prose::message review-alerts/no-records "${projects}" "${version}"
+    return 1
+  fi
+
+  local rules
+  # shellcheck disable=SC2310  # its failures exit here
+  rules="$(rank <<<"${rechecks}")" || die 'cannot rank the rechecks'
+  if [[ -z "${rules}" ]]; then
+    local count
+    count="$(wc -l <<<"${rechecks}")"
+    prose::message review-alerts/none-ranked "${projects}" "${count// /}" \
+      "${version}" "${MIN_RECHECKS}"
+    return 0
+  fi
+  print_rules "${rules}" "${limit}"
+}
+
+main "$@"

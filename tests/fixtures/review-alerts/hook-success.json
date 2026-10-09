@@ -1,0 +1,26 @@
+{
+  "parentUuid": "9db8ade3-a9d2-4781-9ded-aa9e53092000",
+  "isSidechain": false,
+  "attachment": {
+    "type": "hook_success",
+    "hookName": "PostToolUse:Edit",
+    "toolUseID": "toolu_01WgJJTb7wCBFDQ61L3YaP53",
+    "hookEvent": "PostToolUse",
+    "content": "",
+    "stdout": "",
+    "stderr": "",
+    "exitCode": 0,
+    "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lint-prose.sh",
+    "durationMs": 1328
+  },
+  "type": "attachment",
+  "uuid": "146140f3-9523-43d6-9fe5-252c2a0c8530",
+  "timestamp": "2026-10-09T08:42:59.611Z",
+  "session_id": "df5b8e16-5f27-43c7-96d2-f95c33c800ba",
+  "userType": "external",
+  "entrypoint": "cli",
+  "cwd": "/home/dev/notes",
+  "sessionId": "37c3c656-7cf0-4f28-bc7c-5221b01b82e0",
+  "version": "2.1.295",
+  "gitBranch": "main"
+}

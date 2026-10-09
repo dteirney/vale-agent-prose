@@ -5,6 +5,7 @@
   "useGitignore": true,
   "words": [
     "adoc",
+    "argjson",
     "asciidoctor",
     "cljc",
     "cljd",
@@ -14,6 +15,7 @@
     "Cowork",
     "dteirney",
     "EDITMSG",
+    "endswith",
     "errorformat",
     "Flesch",
     "GDAL",
@@ -51,7 +53,8 @@
   ],
 
   // Only a --dot run reaches in here, and then it reads the whole object store.
-  "ignorePaths": [".git/**"],
+  // A fixture is a copy of what Claude Code wrote, ids and field names included.
+  "ignorePaths": [".git/**", "tests/fixtures/**"],
 
   "overrides": [
     // A command and a git hook have no extension, so they get no language, the

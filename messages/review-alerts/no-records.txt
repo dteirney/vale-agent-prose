@@ -1,0 +1,1 @@
+The transcripts under %s hold no rechecks from version %s of the plugin. Either no session has edited a file twice since that version, or Claude Code no longer keeps a hook's stderr in the transcript.

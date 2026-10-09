@@ -1,0 +1,1 @@
+The transcripts under %s hold %s rechecks from version %s of the plugin. No rule has the %s it needs to rank.

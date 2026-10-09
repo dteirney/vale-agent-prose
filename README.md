@@ -176,10 +176,12 @@ trailers and the type prefix.
 | `tools/setup install <dir>` | Everything the setup skill does |
 | `tools/doctor [<dir>]` | Check the setup, and change nothing |
 | `tools/commit-hook install <dir>` | Add the global `commit-msg` hook alone |
+| `tools/review-alerts` | Rank the rules whose alerts persist |
 | `tools/check` | The repository's own gate |
 
 Each exits 0 when clean, 1 on a finding, and 2 on a usage error. Run any of
-them with `--help`.
+them with `--help`. `tools/review-alerts` exits 1 when the transcripts hold no
+rechecks, and names the folder it searched.
 
 `tools/lint-commit-prose` adds cspell to the Vale run above, and exits 1 on an
 alert of any level. This repository's own `githooks/commit-msg` runs it.
