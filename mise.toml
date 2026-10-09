@@ -9,8 +9,9 @@ bats = "1.14.0"
 # bats runs tests in parallel through it.
 rush = "0.11.0"
 claude = "2.1.293"
-# cspell and commitlint install through npm, so they need node.
+# cspell, commitlint and prettier install through npm, so they need node.
 node = "24.21.0"
 "npm:cspell" = "10.3.3"
+"npm:prettier" = "3.9.9"
 "npm:@commitlint/cli" = "21.2.3"
 "npm:@commitlint/config-conventional" = "21.2.3"

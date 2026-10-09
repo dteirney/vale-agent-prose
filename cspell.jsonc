@@ -53,7 +53,7 @@
     "Tricolon",
     "ungated",
     "unmatch",
-    "wayfinder"
+    "wayfinder",
   ],
 
   // Only a --dot run reaches in here, and then it reads the whole object store.
@@ -65,13 +65,13 @@
     // shell dictionary never loads, and every builtin reads as a misspelling.
     {
       "filename": "{githooks,tools}/*",
-      "languageId": "shellscript"
+      "languageId": "shellscript",
     },
 
     // cspell maps no language to .bats, and a bats test is bash.
     {
       "filename": "**/*.bats",
-      "languageId": "shellscript"
+      "languageId": "shellscript",
     },
 
     // A Vale rule single-quotes its regexes and double-quotes its messages, so
@@ -79,7 +79,7 @@
     // newline, or an apostrophe in a comment pairs with the next line's quote.
     {
       "filename": "package/styles/**/*.yml",
-      "ignoreRegExpList": ["/'[^'\\n]*'/g"]
-    }
-  ]
+      "ignoreRegExpList": ["/'[^'\\n]*'/g"],
+    },
+  ],
 }

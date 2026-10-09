@@ -18,5 +18,4 @@ When the user asked to remove the commit-message check, run this one instead:
 "${CLAUDE_PLUGIN_ROOT}/tools/setup" remove
 ```
 
-Done when you've shown the output. On a non-zero exit, show the error lines as the command printed
-them.
+Done when you've shown the output. On a non-zero exit, show the error lines as the command printed them.

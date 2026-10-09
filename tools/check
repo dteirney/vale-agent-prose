@@ -20,10 +20,10 @@ usage() {
 usage: ${PROG} [--fix]
        ${PROG} -h
 
-Run every check this repository gates on: shell, JSON, the plugin manifest,
-spelling, and the tests.
+Run every check this repository gates on: shell, formatting, JSON, the plugin
+manifest, spelling, and the tests.
 
-  --fix        apply shfmt's formatting before reporting
+  --fix        apply shfmt's and prettier's formatting before reporting
   -h, --help   print this and exit
 
 Exit 0 when every step passes, 1 when any fails, 2 on a usage error.
@@ -91,6 +91,18 @@ check_format() {
     record shfmt ok
   else
     record shfmt failed
+  fi
+}
+
+check_prettier() {
+  local flag='--check'
+  if [[ "${FIX}" -eq 1 ]]; then
+    flag='--write'
+  fi
+  if prettier "${flag}" --log-level warn "${ROOT}"; then
+    record prettier ok
+  else
+    record prettier failed
   fi
 }
 
@@ -182,6 +194,7 @@ main() {
   command -v bats >/dev/null || die 'bats is required'
   command -v rush >/dev/null || die 'rush is required'
   command -v cspell >/dev/null || die 'cspell is required'
+  command -v prettier >/dev/null || die 'prettier is required'
   command -v commitlint >/dev/null || die 'commitlint is required'
   command -v claude >/dev/null || die 'claude is required'
 
@@ -189,6 +202,7 @@ main() {
 
   check_shell
   check_format
+  check_prettier
   check_parse
   check_json
   check_plugin
