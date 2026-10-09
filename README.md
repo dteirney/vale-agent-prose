@@ -84,6 +84,31 @@ cspell finds a repository's own configuration as usual. The hook also adds
 matched a pattern, not that the line is wrong, and the skill is how to tell
 which.
 
+### Reviewing the alerts that persist
+
+Each recheck the prose hook makes goes to its stderr as one JSON line. The
+model never receives that line, but the session transcript keeps it.
+`tools/review-alerts` reads those lines from every transcript under
+`~/.claude/projects`, or the same folder under `$CLAUDE_CONFIG_DIR`, subagents
+included. It counts only the current plugin version's. It ranks the rules by how often their alerts persist, once a rule
+has five rechecks. Under each rule it lists the repositories its persisted
+alerts came from, with the Vale configuration each one used. Then it prints
+the persisted alerts with their lines. `--limit` caps the rules it prints and
+`--alert-limit` the alerts under each, and `--help` gives the defaults.
+
+The review skill runs that command when you ask:
+
+```
+/vale-agent-prose:review-alerts
+```
+
+It judges each persisted alert from its line, as a false positive or a rule
+that was right. It sorts each false positive by the repositories in its rule's
+list. For one the package would raise anywhere, it drafts an issue for this
+repository. For one only your repository's prose raises, it shows the Vale
+configuration lines that switch the rule off there. It files nothing and
+edits nothing.
+
 ## The Vale package
 
 Add it to your `.vale.ini` and sync:
