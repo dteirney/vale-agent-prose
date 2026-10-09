@@ -43,30 +43,8 @@ jobs:
             exit 1
           fi
 
-      # Vale takes the style path from the archive's single top-level folder,
-      # and that folder has to carry the archive's own name.
-      - name: Build the package
-        if: ${{ steps.release.outputs.release_created }}
-        run: |
-          cp -R package AgentProse
-          zip -qr AgentProse.zip AgentProse
-
-      # The test suite syncs the directory, with the right content under the
-      # wrong name, so this is the only step covering the archive's shape. The
-      # lint afterwards proves the configuration came with the rules: the upstream
-      # triad rule has to be off for this name to appear.
-      - name: Install it the way a consumer does
-        if: ${{ steps.release.outputs.release_created }}
-        run: |
-          mkdir consumer
-          printf 'StylesPath = styles\nPackages = %s\n' \
-            "${GITHUB_WORKSPACE}/AgentProse.zip" >consumer/.vale.ini
-          vale --config=consumer/.vale.ini sync
-          printf 'The gate needs clarity, discipline, or rigor.\n' \
-            >consumer/smoke.md
-          vale --no-global --config=consumer/.vale.ini --output=line \
-            consumer/smoke.md >alerts.txt || true
-          grep -q 'AgentProse.AbstractTriad' alerts.txt
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: ./.github/actions/build-package
 
       - name: Upload the package
         if: ${{ steps.release.outputs.release_created }}

@@ -16,6 +16,13 @@ jobs:
       - uses: ./.github/actions/setup
       - run: tools/check
 
+  build-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/build-package
+
   # release-please picks the next version from each commit's type on main. A
   # message it can't parse changes what the release says.
   commits:
