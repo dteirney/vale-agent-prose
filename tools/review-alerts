@@ -99,7 +99,9 @@ print_rule() {
     | "",
       "  \(.file)\(if .times > 1 then " (persisted \(.times) times)" else "" end)",
       "  \(.message)",
-      (.lines[] | "    \(.line) |" + (if .text == "" then "" else " \(.text)" end))
+      (.line as $at | .lines[]
+        | (if .line == $at then "  > " else "    " end) + "\(.line) |"
+          + (if .text == "" then "" else " \(.text)" end))
   ' <<<"$1" || return 1
   printf '\n'
 }

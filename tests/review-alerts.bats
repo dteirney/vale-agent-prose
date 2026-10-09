@@ -80,7 +80,7 @@ ranked() {
   } | record_in -home-dev-notes/s1.jsonl
   run review
   [ "${status}" -eq 0 ]
-  [[ "${output}" == *'/home/dev/notes/notes.md'*'2 | The gate needs clarity, discipline, and rigor before anyone trusts it.'* ]]
+  [[ "${output}" == *'/home/dev/notes/notes.md'*'    1 | Intro.'*'  > 2 | The gate needs clarity, discipline, and rigor before anyone trusts it.'* ]]
   [[ "${output}" != *'names no span'* ]]
 }
 
