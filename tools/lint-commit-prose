@@ -34,7 +34,7 @@ Run it from a commit-msg hook, which git passes the message file:
 
   ${PROG} "\$1"
 
-Exit 0 when clean, 1 when it reports a finding, 2 on a usage error.
+Exit 0 when clean, 1 when it reports an alert, 2 on a usage error.
 EOF
 }
 
@@ -74,16 +74,16 @@ main() {
 
   prose::use_default_config "${SCRIPT_DIR}/../vale/.vale.ini"
 
-  # Both linters exit non-zero on a finding, so neither status separates a
-  # report from a failure. The findings themselves are the signal.
-  local findings
+  # Both linters exit non-zero on an alert, so neither status separates a
+  # report from a failure. The alerts themselves are the signal.
+  local alerts
   # shellcheck disable=SC2310  # the failure is handled on the same line
-  findings="$(prose::lint_commit "$1" '')" \
+  alerts="$(prose::lint_commit "$1" '')" \
     || die 'cannot strip the comment block or the trailers'
 
-  [[ -n "${findings}" ]] || return 0
+  [[ -n "${alerts}" ]] || return 0
 
-  printf '%s\n' "${findings}"
+  printf '%s\n' "${alerts}"
   return 1
 }
 

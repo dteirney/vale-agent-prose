@@ -16,7 +16,7 @@ readonly SCRIPT_DIR
 source "${SCRIPT_DIR}/../lib/prose.sh"
 
 # Before this release Vale placed a script rule's match by its offset in the
-# paragraph, not in the file. The prose hook then filtered findings by the
+# paragraph, not in the file. The prose hook then filtered alerts by the
 # wrong line.
 readonly MIN_VALE='3.23.0'
 

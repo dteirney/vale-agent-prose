@@ -106,7 +106,7 @@ lint_commit() {
   [ -z "${output}" ]
 }
 
-@test "a message with a finding exits 1" {
+@test "a message with an alert exits 1" {
   printf 'feat: add clarity, discipline, and rigor\n' >"${MSG}"
   run lint_commit "${MSG}"
   [ "${status}" -eq 1 ]

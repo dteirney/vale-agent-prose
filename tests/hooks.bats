@@ -59,7 +59,7 @@ lint_file() {
   printf '{"tool_input":{"file_path":"%s"}}' "$1" | lint_hook
 }
 
-@test "a file outside a repository reports every finding" {
+@test "a file outside a repository reports every alert" {
   printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
   run lint_file "${WORK}/notes.md"
   [ "${status}" -eq 0 ]
@@ -82,7 +82,7 @@ readonly FIRST='The loader reads the file and checks the header'
 readonly SHORT='before it parses the rest.'
 readonly LONG='before it parses the rest of the body and every section after it in order, and then it validates them all.'
 
-# The finding sits on the sentence's first line, which the edit never touched.
+# The alert sits on the sentence's first line, which the edit never touched.
 @test "an edit that lengthens a comment's sentence reports from the line it starts on" {
   git -C "${WORK}" init -q
   printf '# %s\n# %s\nx = 1\n' "${FIRST}" "${SHORT}" >"${WORK}/a.py"
@@ -155,7 +155,7 @@ readonly LONG='before it parses the rest of the body and every section after it 
   [ ! -e "${WORK}/styles/AgentProse" ]
 }
 
-@test "the doctor names a Vale too old to place findings" {
+@test "the doctor names a Vale too old to place alerts" {
   mkdir "${WORK}/bin"
   printf '#!/usr/bin/env bash\n[[ "$1" == --version ]] && exec echo "vale version 3.22.0"\nexec %s "$@"\n' \
     "$(command -v vale)" >"${WORK}/bin/vale"

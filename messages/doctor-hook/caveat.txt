@@ -1,1 +1,1 @@
-Until the user fixes this, the prose hook can miss findings. If the hook reports nothing, that doesn't mean the prose is clean.
+Until the user fixes this, the prose hook can miss alerts. If the hook reports nothing, that doesn't mean the prose is clean.

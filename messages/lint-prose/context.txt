@@ -1,1 +1,1 @@
-Each finding is a guess. Fix the lines that are worse for the flagged words. For the rest, say why, and quote the words or name the file or command you checked.
+Each alert is a guess. Fix the lines that are worse for the flagged words. For the rest, say why, and quote the words or name the file or command you checked.

@@ -65,8 +65,8 @@ jobs:
           printf 'The gate needs clarity, discipline, or rigor.\n' \
             >consumer/smoke.md
           vale --no-global --config=consumer/.vale.ini --output=line \
-            consumer/smoke.md >findings.txt || true
-          grep -q 'AgentProse.AbstractTriad' findings.txt
+            consumer/smoke.md >alerts.txt || true
+          grep -q 'AgentProse.AbstractTriad' alerts.txt
 
       - name: Upload the package
         if: ${{ steps.release.outputs.release_created }}

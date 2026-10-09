@@ -21,7 +21,7 @@ teardown_file() {
   rm -rf "${CONSUMER}"
 }
 
-# Lint one string and print the findings. --no-global keeps a developer's own
+# Lint one string and print the alerts. --no-global keeps a developer's own
 # machine config out of the result.
 lint() {
   printf '%s\n' "$1" >"${CONSUMER}/probe.md"
@@ -130,7 +130,7 @@ lint() {
   [[ "${output}" != *'Tricolon'* ]]
 }
 
-# Lint a file of the given name holding the given lines, and print the findings.
+# Lint a file of the given name holding the given lines, and print the alerts.
 lint_source() {
   local name="$1"
   shift
@@ -148,7 +148,7 @@ readonly LONG_SECOND='that it sails far past the twenty-five word threshold the 
 long_sentence_caught() {
   run lint_source "$@"
   [[ "${output}" == *'Std.Readability.SentenceLength:Long sentence: 27 words.'* ]] \
-    || { printf 'no finding through %s:\n%s\n' "$1" "${output}"; return 1; }
+    || { printf 'no alert through %s:\n%s\n' "$1" "${output}"; return 1; }
 }
 
 @test "a long sentence wrapped across comment lines is caught on every route" {
@@ -178,7 +178,7 @@ comment_marker() {
   esac
 }
 
-# Count the findings of rule $2 on line $3 of the findings in $1.
+# Count the alerts of rule $2 on line $3 of the alerts in $1.
 count_at() {
   grep -c "^[^:]*:$3:[0-9]*:$2" <<<"$1" || true
 }
@@ -228,7 +228,7 @@ count_at() {
 }
 
 # A pattern-read language mapped to md fails the whole run with E100, which
-# would take every other file's findings with it.
+# would take every other file's alerts with it.
 @test "a powershell file still lints its comments" {
   run lint_source probe.ps1 '# Here we simply do not stop.' '$x = 1'
   [[ "${output}" != *'E100'* ]]

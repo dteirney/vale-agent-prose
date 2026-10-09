@@ -44,7 +44,7 @@ commit() {
   git -C "${WORK}/repo" commit --allow-empty -q -m "$1"
 }
 
-@test "a finding in the message stops the commit" {
+@test "an alert in the message stops the commit" {
   commit_hook install "${DATA}"
   run commit "${TRIAD}"
   [ "${status}" -eq 1 ]
@@ -129,7 +129,7 @@ repo_hook() {
   [ "${output}" = 'commit-msg' ]
 }
 
-@test "remove takes the hook out, and a finding commits again" {
+@test "remove takes the hook out, and an alert commits again" {
   commit_hook install "${DATA}"
   run commit_hook remove
   [ "${status}" -eq 0 ]

@@ -4,7 +4,7 @@ Prose linting for the text an agent writes: markdown, the comments in a source
 file, and a commit message.
 
 It ships two things. A Claude Code plugin that lints every file the agent
-writes and hands the findings back to it. A [Vale](https://vale.sh) package
+writes and hands the alerts back to it. A [Vale](https://vale.sh) package
 that the plugin runs. It combines the published style packages and switches off
 the rules that only add noise.
 
@@ -21,7 +21,7 @@ plugin from that directory, and an edit there takes effect at the next session
 or `/reload-plugins`.
 
 A `PostToolUse` hook on `Write` and `Edit` lints the file the agent wrote and
-returns the findings as context. In a file git tracks, it reports every finding
+returns the alerts as context. In a file git tracks, it reports every alert
 in each paragraph or comment the edit touched. A sentence the edit made too long
 reports even where it starts on an older line. An old comment the edit didn't
 touch stays out.
@@ -44,7 +44,7 @@ It runs `tools/setup install`, which does three things:
 - syncs the styles that the current repository's own Vale configuration lists
 
 A commit message gets checked by git itself, before the commit lands. From then on, every `git commit` in every repository runs the check, whether
-the agent commits or you do. A finding stops the commit and prints why. The
+the agent commits or you do. An alert stops the commit and prints why. The
 repository's own `commit-msg` hook still runs. This needs git 2.54.0 or later,
 the first release that runs a hook named in git's configuration.
 
@@ -59,7 +59,7 @@ directory. Both hooks use it. After a plugin update, a `SessionStart` hook syncs
 it again, which needs the network and takes a few seconds.
 
 Another `SessionStart` hook warns you once per session when the prose hook
-would miss findings. The causes are a missing tool, styles nobody has synced,
+would miss alerts. The causes are a missing tool, styles nobody has synced,
 and a Vale older than 3.23.0. It also warns when commit messages go unchecked.
 Each warning that setup can fix names the setup skill. Without the warning, a
 hook that never ran looks the same as a clean file.
@@ -74,7 +74,7 @@ cspell finds a repository's own configuration as usual. The hook also adds
 `~/.claude/cspell.json` when that file exists, or the same file under
 `$CLAUDE_CONFIG_DIR`. A word list you keep there applies in every repository.
 
-`skills/settle-prose-finding` is the companion skill. A finding says a line
+`skills/settle-prose-alert` is the companion skill. An alert says a line
 matched a pattern, not that the line is wrong, and the skill is how to tell
 which.
 
@@ -94,7 +94,7 @@ vale sync
 `latest` takes each release as it ships. To stay on one, name its tag instead:
 `releases/download/v0.1.0/AgentProse.zip`.
 
-It needs Vale 3.23.0 or later. An older Vale reports some findings on the wrong
+It needs Vale 3.23.0 or later. An older Vale reports some alerts on the wrong
 line.
 
 `StylesPath` and `Vocab` stay yours. The package sets neither, because a
@@ -152,8 +152,8 @@ a job runs on:
 git log -1 --format=%B | vale --path=COMMIT_EDITMSG
 ```
 
-Vale exits 0 when every finding is a warning or a suggestion, so the hook
-prints the findings and the commit goes ahead.
+Vale exits 0 when every alert is a warning or a suggestion, so the hook
+prints the alerts and the commit goes ahead.
 
 The section names its own View, `CommitMessage`. Add the
 [Commits](https://github.com/jdkato/commits) package beside this one and its
@@ -175,12 +175,12 @@ trailers and the type prefix.
 Each exits 0 when clean, 1 on a finding, and 2 on a usage error. Run any of
 them with `--help`.
 
-`tools/lint-commit-prose` adds cspell to the Vale run above, and exits 1 on a
-finding of any level. This repository's own `githooks/commit-msg` runs it.
+`tools/lint-commit-prose` adds cspell to the Vale run above, and exits 1 on an
+alert of any level. This repository's own `githooks/commit-msg` runs it.
 
 ## Reporting to a pull request
 
-`vale --output=rdjsonl.tmpl` renders findings as rdjsonl, with the severity and
+`vale --output=rdjsonl.tmpl` renders alerts as rdjsonl, with the severity and
 the rule's doc link that an errorformat parse drops. `vale sync` installs the
 template, and the name needs its extension:
 

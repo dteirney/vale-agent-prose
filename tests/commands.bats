@@ -37,7 +37,7 @@ lint_branch() {
   "${REPO}/tools/lint-branch-prose" "$@"
 }
 
-@test "lint-prose walks a directory and exits 1 on a finding" {
+@test "lint-prose walks a directory and exits 1 on an alert" {
   mkdir "${WORK}/docs"
   printf '%s\n' "${TRIAD}" >"${WORK}/docs/a.md"
   run lint_prose "${WORK}/docs"
@@ -62,7 +62,7 @@ lint_branch() {
   printf '%s\n\n%s\n' "${TRIAD}" "${TRIAD}" >"${WORK}/a.md"
   run lint_prose --limit 1 "${WORK}/a.md"
   [ "${status}" -eq 1 ]
-  [[ "${output}" == *'Findings by rule:'* ]]
+  [[ "${output}" == *'Alerts by rule:'* ]]
 }
 
 @test "lint-prose with no operand is a usage error" {

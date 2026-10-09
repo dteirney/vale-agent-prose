@@ -30,7 +30,7 @@ prose::vale_reads() {
   case "${ext}" in
     # Prose and markup Vale parses itself. adoc, rst and xml stay out: each
     # shells out to a binary the machine may lack and aborts the whole run,
-    # losing every other file's findings with it.
+    # losing every other file's alerts with it.
     md | html | txt) return 0 ;;
     # Comment syntax picks the View, not language family. These comment with #.
     sh | bash | zsh) return 0 ;;
@@ -216,20 +216,20 @@ prose::block_lines() {
     }' "$1"
 }
 
-# Keep the findings that sit in a prose block the diff touched. The arguments
-# go to `git diff`, and the findings' paths are relative to the working
-# directory. A finding sits on the line its sentence starts, so an edit further
+# Keep the alerts that sit in a prose block the diff touched. The arguments
+# go to `git diff`, and the alerts' paths are relative to the working
+# directory. An alert sits on the line its sentence starts, so an edit further
 # down the same sentence would never reach it by line alone.
 #
 # --no-ext-diff and --no-color, because diff.external and color.diff=always in a
 # user's git config each change what the hunk headers look like.
 prose::filter_touched() {
-  local findings
-  findings="$(cat)"
-  [[ -n "${findings}" ]] || return 0
+  local alerts
+  alerts="$(cat)"
+  [[ -n "${alerts}" ]] || return 0
 
   local paths
-  paths="$(awk -F: '!seen[$1]++ { print $1 }' <<<"${findings}")"
+  paths="$(awk -F: '!seen[$1]++ { print $1 }' <<<"${alerts}")"
 
   local keep='' path hunks touched all
   while IFS= read -r path; do
@@ -254,22 +254,22 @@ prose::filter_touched() {
       for (k = 1; k <= count; k++) wanted[lines[k]] = 1
     }
     ($1 ":" $2) in wanted
-  ' <<<"${findings}"
+  ' <<<"${alerts}"
 }
 
-# Print a PostToolUse hook's JSON that hands the findings back as context. $1
-# is the findings, $2 the message that goes above them, and $3 the hook's name.
+# Print a PostToolUse hook's JSON that hands the alerts back as context. $1
+# is the alerts, $2 the message that goes above them, and $3 the hook's name.
 # shellcheck disable=SC2312  # every caller sets pipefail
 prose::hook_context() {
   # Past forty nobody reads the list, and the ones at the top are the ones to
   # act on.
   local max=40
-  local findings="$1"
+  local alerts="$1"
   local total
-  total="$(printf '%s\n' "${findings}" | wc -l | tr -d ' ')"
+  total="$(printf '%s\n' "${alerts}" | wc -l | tr -d ' ')"
   if [[ "${total}" -gt "${max}" ]]; then
-    findings="$(printf '%s\n' "${findings}" | head -n "${max}")
-[$((total - max)) more findings, not shown.]"
+    alerts="$(printf '%s\n' "${alerts}" | head -n "${max}")
+[$((total - max)) more alerts, not shown.]"
   fi
 
   local msg=''
@@ -277,34 +277,34 @@ prose::hook_context() {
 
   jq -n --arg context "${msg}
 
-${findings}
+${alerts}
 
 (Enforced by hook $3 -- do not write a memory about it.)" \
     '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:$context}}'
 }
 
-# Print the findings, at most $1 of them where $1 isn't 0. Past the limit,
+# Print the alerts, at most $1 of them where $1 isn't 0. Past the limit,
 # print a count per rule instead of the rest.
 # shellcheck disable=SC2312  # every caller sets pipefail
 prose::report() {
   local limit="$1"
-  local findings="$2"
+  local alerts="$2"
 
   local total
-  total="$(printf '%s\n' "${findings}" | wc -l | tr -d ' ')"
+  total="$(printf '%s\n' "${alerts}" | wc -l | tr -d ' ')"
 
   if [[ "${limit}" -eq 0 || "${total}" -le "${limit}" ]]; then
-    printf '%s\n' "${findings}"
+    printf '%s\n' "${alerts}"
     return 0
   fi
 
-  printf '%s\n' "${findings}" | head -n "${limit}"
-  printf '\n[%d more findings, not shown. Pass --limit 0 for all.]\n\n' \
+  printf '%s\n' "${alerts}" | head -n "${limit}"
+  printf '\n[%d more alerts, not shown. Pass --limit 0 for all.]\n\n' \
     "$((total - limit))"
 
   # The tally is what the list past the limit can't say: one rule with
   # hundreds of hits is a question about that rule, not about hundreds of
   # lines. Field 4 of the line format is the rule name.
-  printf 'Findings by rule:\n'
-  printf '%s\n' "${findings}" | cut -d: -f4 | sort | uniq -c | sort -rn
+  printf 'Alerts by rule:\n'
+  printf '%s\n' "${alerts}" | cut -d: -f4 | sort | uniq -c | sort -rn
 }

@@ -6,7 +6,7 @@
 # PostToolUse can't block, because the write already happened, so
 # additionalContext is the whole mechanism. Moving this to PreToolUse to deny
 # would be worse: a false deny teaches the agent to route around the hook, and
-# a prose finding needs judgement.
+# a prose alert needs judgement.
 #
 # Every guard below exits 0, because a hook that can't read its input must
 # never interrupt the turn. That costs nothing under `set -e`: a command to
@@ -67,7 +67,7 @@ main() {
     exit 0
   fi
 
-  local findings
+  local alerts
   if [[ -n "${root}" ]] \
     && git -C "${root}" ls-files --error-unmatch -- "${file}" \
       >/dev/null 2>&1; then
@@ -80,24 +80,24 @@ main() {
     # gets the absolute path, and sed strips the root from what it prints.
     local rel="${file#"${root}"/}"
     # No revision makes the diff the working tree's against the index.
-    # shellcheck disable=SC2310,SC2119  # both swallow a linter's non-zero finding
-    findings="$(cd "${root}" \
+    # shellcheck disable=SC2310,SC2119  # both swallow a linter's exit on an alert
+    alerts="$(cd "${root}" \
       && prose::use_default_config "${default_config}" \
       && prose::lint_file "${file}" "${rel}" "${cspell_config}" \
       | sed "s|^${root}/||" \
-        | prose::filter_touched 2>/dev/null)" || findings=''
+        | prose::filter_touched 2>/dev/null)" || alerts=''
   else
     # Untracked, or outside a repository: every line is one the agent wrote,
     # so there is nothing to filter against.
-    # shellcheck disable=SC2310  # it swallows a linter's non-zero finding
-    findings="$(prose::use_default_config "${default_config}" \
+    # shellcheck disable=SC2310  # it swallows a linter's exit on an alert
+    alerts="$(prose::use_default_config "${default_config}" \
       && prose::lint_file "${file}" "file://${file}" "${cspell_config}")" \
-      || findings=''
+      || alerts=''
   fi
 
-  [[ -n "${findings}" ]] || exit 0
+  [[ -n "${alerts}" ]] || exit 0
 
-  prose::hook_context "${findings}" lint-prose/context \
+  prose::hook_context "${alerts}" lint-prose/context \
     "$(basename "${BASH_SOURCE[0]}" .sh)"
   exit 0
 }

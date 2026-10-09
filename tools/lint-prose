@@ -26,13 +26,13 @@ Lint the prose in the paths you name. Vale reads the comments in a source file
 and the whole of a markdown file. A directory is walked. Your shell expands a
 glob before ${PROG} sees it, so a pattern works as a list of paths.
 
-  --limit <n>    print at most <n> findings, 0 for all (default ${DEFAULT_LIMIT})
+  --limit <n>    print at most <n> alerts, 0 for all (default ${DEFAULT_LIMIT})
   -h, --help     print this and exit
 
 Past the limit it prints a count per rule instead of the rest. One rule with
 hundreds of hits is a question about that rule, not about hundreds of lines.
 
-Exit 0 when clean, 1 when it reports a finding, 2 on a usage error.
+Exit 0 when clean, 1 when it reports an alert, 2 on a usage error.
 EOF
 }
 
@@ -107,15 +107,15 @@ main() {
 
   [[ ${#files[@]} -gt 0 ]] || return 0
 
-  # Vale exits non-zero on a finding, so its status says nothing about whether
-  # the run worked. The findings themselves are the signal.
-  local findings
-  # shellcheck disable=SC2310  # it swallows a linter's non-zero finding
-  findings="$(prose::lint_files "${files[@]}" \
+  # Vale exits non-zero on an alert, so its status says nothing about whether
+  # the run worked. The alerts themselves are the signal.
+  local alerts
+  # shellcheck disable=SC2310  # it swallows a linter's exit on an alert
+  alerts="$(prose::lint_files "${files[@]}" \
     | grep -E '^[^:]+:[0-9]+:[0-9]+:' || true)"
-  [[ -n "${findings}" ]] || return 0
+  [[ -n "${alerts}" ]] || return 0
 
-  prose::report "${limit}" "${findings}"
+  prose::report "${limit}" "${alerts}"
   return 1
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Lint the prose this branch added, and report only findings on added lines.
+# Lint the prose this branch added, and report only alerts on added lines.
 set -euo pipefail
 IFS=$'\n\t'
 
@@ -20,17 +20,17 @@ usage: ${PROG} [--base <ref>] [--limit <n>]
 
 Lint the prose this branch added, uncommitted edits to tracked files included.
 Vale reads the comments in a source file and the whole of a markdown file.
-Findings on lines the branch did not touch are dropped, so an old comment in a
+Alerts on lines the branch did not touch are dropped, so an old comment in a
 file you edited stays out of the report.
 
   --base <ref>   compare against <ref> rather than the default branch
-  --limit <n>    print at most <n> findings, 0 for all (default ${DEFAULT_LIMIT})
+  --limit <n>    print at most <n> alerts, 0 for all (default ${DEFAULT_LIMIT})
   -h, --help     print this and exit
 
 Past the limit it prints a count per rule instead of the rest. One rule with
 hundreds of hits is a question about that rule, not about hundreds of lines.
 
-Exit 0 when clean, 1 when it reports a finding, 2 on a usage error.
+Exit 0 when clean, 1 when it reports an alert, 2 on a usage error.
 EOF
 }
 
@@ -107,7 +107,7 @@ main() {
     || usage_error "unknown ref '${base}'"
 
   # The linters read the working tree, so the diff has to end there too. A
-  # diff ending at HEAD puts an uncommitted line's findings on the wrong line.
+  # diff ending at `HEAD` puts an uncommitted line's alerts on the wrong line.
   local fork
   fork="$(git merge-base "${base}" HEAD)" \
     || die "no common ancestor with '${base}'"
@@ -129,17 +129,17 @@ main() {
 
   [[ ${#files[@]} -gt 0 ]] || return 0
 
-  # Vale exits non-zero on a finding, so its status says nothing about
-  # whether the run worked. The findings themselves are the signal.
-  local findings
-  # shellcheck disable=SC2310  # it swallows a linter's non-zero finding
-  findings="$(prose::lint_files "${files[@]}" \
+  # Vale exits non-zero on an alert, so its status says nothing about
+  # whether the run worked. The alerts themselves are the signal.
+  local alerts
+  # shellcheck disable=SC2310  # it swallows a linter's exit on an alert
+  alerts="$(prose::lint_files "${files[@]}" \
     | prose::filter_touched "${fork}")" \
-    || die 'git diff failed while filtering the findings'
+    || die 'git diff failed while filtering the alerts'
 
-  [[ -n "${findings}" ]] || return 0
+  [[ -n "${alerts}" ]] || return 0
 
-  prose::report "${limit}" "${findings}"
+  prose::report "${limit}" "${alerts}"
   return 1
 }
 

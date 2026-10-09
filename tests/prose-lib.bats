@@ -69,9 +69,9 @@ gate_extensions() {
 }
 
 @test "the report past its limit prints a count per rule" {
-  local findings
-  findings="$(printf 'a.md:%d:1:Std.Rule:message\n' 1 2 3)"
-  run prose::report 2 "${findings}"
-  [[ "${output}" == *'[1 more findings, not shown.'* ]]
+  local alerts
+  alerts="$(printf 'a.md:%d:1:Std.Rule:message\n' 1 2 3)"
+  run prose::report 2 "${alerts}"
+  [[ "${output}" == *'[1 more alerts, not shown.'* ]]
   [[ "${output}" == *'3 Std.Rule'* ]]
 }
