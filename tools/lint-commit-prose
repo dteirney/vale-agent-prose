@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+#
+# Lint a commit message as prose. Git's commit-msg hook passes the file.
+#
+#   tools/lint-commit-prose .git/COMMIT_EDITMSG
+set -euo pipefail
+IFS=$'\n\t'
+
+readonly PROG="${0##*/}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+
+# shellcheck source=lib/prose.sh
+source "${SCRIPT_DIR}/../lib/prose.sh"
+
+usage() {
+  cat <<EOF
+usage: ${PROG} <file>
+       ${PROG} -h
+
+Lint the prose in a commit message with Vale, and with cspell when it's on the
+PATH. Four parts of the file are format rather than prose, and none of them
+reaches the linters: git's comment block, the conventional-commit type prefix,
+a bracketed ticket key, and the trailers.
+
+Where Vale finds no config from the working directory, it uses
+../vale/.vale.ini, relative to this command, when that file exists. The
+plugin keeps one there for the copy its commit hook runs.
+
+  -h, --help   print this and exit
+
+Run it from a commit-msg hook, which git passes the message file:
+
+  ${PROG} "\$1"
+
+Exit 0 when clean, 1 when it reports a finding, 2 on a usage error.
+EOF
+}
+
+usage_error() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  usage >&2
+  exit 2
+}
+
+die() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  exit 1
+}
+
+main() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
+        return 0
+        ;;
+      --)
+        shift
+        break
+        ;;
+      -*) usage_error "unknown option '$1'" ;;
+      *) break ;;
+    esac
+    shift
+  done
+
+  [[ $# -eq 1 ]] || usage_error "expected one file, got $#"
+  [[ -f "$1" ]] || usage_error "no such file '$1'"
+
+  command -v git >/dev/null || die 'git is required'
+  command -v vale >/dev/null || die 'vale is required'
+
+  prose::use_default_config "${SCRIPT_DIR}/../vale/.vale.ini"
+
+  # Both linters exit non-zero on a finding, so neither status separates a
+  # report from a failure. The findings themselves are the signal.
+  local findings
+  # shellcheck disable=SC2310  # the failure is handled on the same line
+  findings="$(prose::lint_commit "$1" '')" \
+    || die 'cannot strip the comment block or the trailers'
+
+  [[ -n "${findings}" ]] || return 0
+
+  printf '%s\n' "${findings}"
+  return 1
+}
+
+main "$@"

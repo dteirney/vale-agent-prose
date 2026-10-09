@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+#
+# Lint the prose in the files you name. Every line, not only the added ones.
+#
+#   tools/lint-prose README.md
+#   tools/lint-prose docs/ package/
+#   tools/lint-prose src/**/*.ts
+set -euo pipefail
+IFS=$'\n\t'
+
+readonly PROG="${0##*/}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+
+# shellcheck source=lib/prose.sh
+source "${SCRIPT_DIR}/../lib/prose.sh"
+
+readonly DEFAULT_LIMIT=40
+
+usage() {
+  cat <<EOF
+usage: ${PROG} [--limit <n>] <path>...
+       ${PROG} -h
+
+Lint the prose in the paths you name. Vale reads the comments in a source file
+and the whole of a markdown file. A directory is walked. Your shell expands a
+glob before ${PROG} sees it, so a pattern works as a list of paths.
+
+  --limit <n>    print at most <n> findings, 0 for all (default ${DEFAULT_LIMIT})
+  -h, --help     print this and exit
+
+Past the limit it prints a count per rule instead of the rest. One rule with
+hundreds of hits is a question about that rule, not about hundreds of lines.
+
+Exit 0 when clean, 1 when it reports a finding, 2 on a usage error.
+EOF
+}
+
+usage_error() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  usage >&2
+  exit 2
+}
+
+die() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  exit 1
+}
+
+# Expand one operand into the files to lint. A directory is walked; a file
+# stands for itself. Symlinked directories stay out, because -L on a tree that
+# points at itself never ends.
+collect_paths() {
+  local operand="$1"
+  if [[ -d "${operand}" ]]; then
+    find "${operand}" -type f -not -path '*/.git/*' | sort \
+      || die "cannot walk '${operand}'"
+  else
+    printf '%s\n' "${operand}"
+  fi
+}
+
+main() {
+  local limit="${DEFAULT_LIMIT}"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
+        return 0
+        ;;
+      --limit)
+        [[ $# -ge 2 ]] || usage_error '--limit needs a count'
+        [[ "$2" =~ ^[0-9]+$ ]] || usage_error "--limit wants a number, got '$2'"
+        limit="$2"
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      -*) usage_error "unknown option '$1'" ;;
+      *) break ;;
+    esac
+    shift
+  done
+
+  # No operand prints help rather than linting the tree. An accidental
+  # whole-repository run is slow, and clig.dev warns against the surprise.
+  if [[ $# -eq 0 ]]; then
+    usage
+    return 2
+  fi
+
+  command -v vale >/dev/null || die 'vale is required'
+
+  local -a files=()
+  local operand out line
+  for operand in "$@"; do
+    [[ -e "${operand}" ]] || usage_error "no such path '${operand}'"
+    out="$(collect_paths "${operand}")"
+    while IFS= read -r line; do
+      if [[ -n "${line}" ]]; then
+        files+=("${line}")
+      fi
+    done <<<"${out}"
+  done
+
+  [[ ${#files[@]} -gt 0 ]] || return 0
+
+  # Vale exits non-zero on a finding, so its status says nothing about whether
+  # the run worked. The findings themselves are the signal.
+  local findings
+  # shellcheck disable=SC2310  # it swallows a linter's non-zero finding
+  findings="$(prose::lint_files "${files[@]}" \
+    | grep -E '^[^:]+:[0-9]+:[0-9]+:' || true)"
+  [[ -n "${findings}" ]] || return 0
+
+  prose::report "${limit}" "${findings}"
+  return 1
+}
+
+main "$@"

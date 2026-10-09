@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+#
+# Lint the prose this branch added, and report only findings on added lines.
+set -euo pipefail
+IFS=$'\n\t'
+
+readonly PROG="${0##*/}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+
+# shellcheck source=lib/prose.sh
+source "${SCRIPT_DIR}/../lib/prose.sh"
+
+readonly DEFAULT_LIMIT=40
+
+usage() {
+  cat <<EOF
+usage: ${PROG} [--base <ref>] [--limit <n>]
+       ${PROG} -h
+
+Lint the prose this branch added, uncommitted edits to tracked files included.
+Vale reads the comments in a source file and the whole of a markdown file.
+Findings on lines the branch did not touch are dropped, so an old comment in a
+file you edited stays out of the report.
+
+  --base <ref>   compare against <ref> rather than the default branch
+  --limit <n>    print at most <n> findings, 0 for all (default ${DEFAULT_LIMIT})
+  -h, --help     print this and exit
+
+Past the limit it prints a count per rule instead of the rest. One rule with
+hundreds of hits is a question about that rule, not about hundreds of lines.
+
+Exit 0 when clean, 1 when it reports a finding, 2 on a usage error.
+EOF
+}
+
+# A usage error: what the caller passed cannot be acted on.
+usage_error() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  usage >&2
+  exit 2
+}
+
+# A runtime failure: the arguments were fine, the work could not be done.
+die() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  exit 1
+}
+
+default_base() {
+  local ref
+  for ref in origin/main origin/master main master; do
+    if git rev-parse --verify --quiet "${ref}" >/dev/null; then
+      printf '%s\n' "${ref}"
+      return 0
+    fi
+  done
+  die 'no default branch found, so pass --base <ref>'
+}
+
+main() {
+  local base=''
+  local limit="${DEFAULT_LIMIT}"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
+        return 0
+        ;;
+      --base)
+        [[ $# -ge 2 ]] || usage_error '--base needs a ref'
+        base="$2"
+        shift
+        ;;
+      --limit)
+        [[ $# -ge 2 ]] || usage_error '--limit needs a count'
+        [[ "$2" =~ ^[0-9]+$ ]] || usage_error "--limit wants a number, got '$2'"
+        limit="$2"
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      -*)
+        usage_error "unknown option '$1'"
+        ;;
+      *)
+        break
+        ;;
+    esac
+    shift
+  done
+
+  [[ $# -eq 0 ]] || usage_error "expected no operands, got $#"
+
+  command -v git >/dev/null || die 'git is required'
+  command -v vale >/dev/null || die 'vale is required'
+
+  local root
+  root="$(git rev-parse --show-toplevel 2>/dev/null)" \
+    || die 'not inside a git repository'
+  cd "${root}"
+
+  [[ -n "${base}" ]] || base="$(default_base)"
+  git rev-parse --verify --quiet "${base}" >/dev/null \
+    || usage_error "unknown ref '${base}'"
+
+  # The linters read the working tree, so the diff has to end there too. A
+  # diff ending at HEAD puts an uncommitted line's findings on the wrong line.
+  local fork
+  fork="$(git merge-base "${base}" HEAD)" \
+    || die "no common ancestor with '${base}'"
+
+  # Capture before the loop. A process substitution hides git's exit status,
+  # so a failed diff would read as an empty file list and report clean.
+  # --diff-filter=d drops a deleted file, which has no lines left to lint.
+  local changed
+  changed="$(git diff --name-only --diff-filter=d "${fork}")" \
+    || die "git diff against '${base}' failed"
+
+  local -a files=()
+  local line
+  while IFS= read -r line; do
+    if [[ -n "${line}" ]]; then
+      files+=("${line}")
+    fi
+  done <<<"${changed}"
+
+  [[ ${#files[@]} -gt 0 ]] || return 0
+
+  # Vale exits non-zero on a finding, so its status says nothing about
+  # whether the run worked. The findings themselves are the signal.
+  local findings
+  # shellcheck disable=SC2310  # it swallows a linter's non-zero finding
+  findings="$(prose::lint_files "${files[@]}" \
+    | prose::filter_touched "${fork}")" \
+    || die 'git diff failed while filtering the findings'
+
+  [[ -n "${findings}" ]] || return 0
+
+  prose::report "${limit}" "${findings}"
+  return 1
+}
+
+main "$@"
