@@ -1,0 +1,11 @@
+name: Set up the gate's tools
+description: Install every tool tools/check needs, at the versions mise.toml pins.
+
+# Both workflows use this, which is what keeps a release from building against
+# a different Vale than the gate ran.
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@v5.1.1
+      with:
+        version: 2026.10.4

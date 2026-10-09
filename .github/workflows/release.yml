@@ -1,0 +1,76 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+
+# release-please opens and updates the release pull request, and creates the
+# tag and the release when that pull request merges.
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v5
+        id: release
+
+      # The build and the upload run here, because a tag that release-please
+      # creates with the workflow's own token starts no other workflow.
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: actions/checkout@v4
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: ./.github/actions/setup
+      - if: ${{ steps.release.outputs.release_created }}
+        run: tools/check
+
+      # release-please writes the version into both manifests. This proves the
+      # extra-files paths still reach them, because a manifest behind the tag
+      # ships a plugin that a consumer never updates past.
+      - name: Check the release against the manifests
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          found="$(jq -r '.. | objects | .version // empty' \
+            .claude-plugin/plugin.json .claude-plugin/marketplace.json |
+            sort -u)"
+          if [[ "${found}" != "${VERSION}" ]]; then
+            echo "the release says ${VERSION}, the manifests say: ${found}"
+            exit 1
+          fi
+
+      # Vale takes the style path from the archive's single top-level folder,
+      # and that folder has to carry the archive's own name.
+      - name: Build the package
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          cp -R package AgentProse
+          zip -qr AgentProse.zip AgentProse
+
+      # The test suite syncs the directory, with the right content under the
+      # wrong name, so this is the only step covering the archive's shape. The
+      # lint afterwards proves the configuration came with the rules: the upstream
+      # triad rule has to be off for this name to appear.
+      - name: Install it the way a consumer does
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          mkdir consumer
+          printf 'StylesPath = styles\nPackages = %s\n' \
+            "${GITHUB_WORKSPACE}/AgentProse.zip" >consumer/.vale.ini
+          vale --config=consumer/.vale.ini sync
+          printf 'The gate needs clarity, discipline, or rigor.\n' \
+            >consumer/smoke.md
+          vale --no-global --config=consumer/.vale.ini --output=line \
+            consumer/smoke.md >findings.txt || true
+          grep -q 'AgentProse.AbstractTriad' findings.txt
+
+      - name: Upload the package
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: gh release upload "${TAG}" AgentProse.zip

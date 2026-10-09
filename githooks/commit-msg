@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#
+# Check the commit message's format with commitlint, and lint it as prose.
+#
+# Install: git config core.hooksPath githooks
+set -euo pipefail
+IFS=$'\n\t'
+
+root="$(git rev-parse --show-toplevel)"
+failed=0
+
+commitlint --cwd "${root}" --edit "$1" || failed=1
+
+# The plugin's global hook runs the same prose check first, and a second run
+# prints every finding twice. An older git has no `hook list` and runs this one.
+hooks="$(git hook list commit-msg 2>/dev/null)" || hooks=''
+if [[ $'\n'"${hooks}"$'\n' != *$'\nvale-agent-prose\n'* ]]; then
+  "${root}/tools/lint-commit-prose" "$1" || failed=1
+fi
+
+exit "${failed}"

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# Run the gate before a push, so a failure costs seconds rather than a CI
+# round trip. CI runs the same command, so this changes when you find out and
+# not whether.
+#
+# Install: git config core.hooksPath githooks
+set -euo pipefail
+IFS=$'\n\t'
+
+root="$(git rev-parse --show-toplevel)"
+exec "${root}/tools/check"

@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+#
+# The gate. Run it from anywhere.
+#
+#   tools/check         report every failure, exit non-zero if any
+#   tools/check --fix   rewrite formatting in place first, then report
+#
+# Every step runs even when an earlier one fails, because a formatting
+# complaint shouldn't hide a broken package. The summary names each step, so a
+# red gate is one line to read rather than a scroll.
+set -euo pipefail
+IFS=$'\n\t'
+
+readonly PROG="${0##*/}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly ROOT
+
+usage() {
+  cat <<EOF
+usage: ${PROG} [--fix]
+       ${PROG} -h
+
+Run every check this repository gates on: shell, JSON, the plugin manifest,
+spelling, and the tests.
+
+  --fix        apply shfmt's formatting before reporting
+  -h, --help   print this and exit
+
+Exit 0 when every step passes, 1 when any fails, 2 on a usage error.
+EOF
+}
+
+usage_error() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  usage >&2
+  exit 2
+}
+
+die() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  exit 1
+}
+
+# Each step appends "name:ok" or "name:failed" here.
+RESULTS=()
+
+record() {
+  RESULTS+=("$1:$2")
+}
+
+# Collected once. A process substitution would hide a failed find, and an
+# empty list makes every step below pass without checking anything.
+SCRIPTS=()
+JSON_FILES=()
+
+collect() {
+  local out line
+  out="$(find "${ROOT}/githooks" "${ROOT}/lib" "${ROOT}/scripts" "${ROOT}/tools" \
+    -type f \( -name '*.sh' -o ! -name '*.*' \) | sort)" \
+    || die 'cannot list the scripts'
+  while IFS= read -r line; do
+    if [[ -n "${line}" ]]; then
+      SCRIPTS+=("${line}")
+    fi
+  done <<<"${out}"
+  [[ ${#SCRIPTS[@]} -gt 0 ]] || die 'found no scripts to check'
+
+  out="$(find "${ROOT}" -name '*.json' -not -path '*/.git/*' | sort)" \
+    || die 'cannot list the JSON files'
+  while IFS= read -r line; do
+    if [[ -n "${line}" ]]; then
+      JSON_FILES+=("${line}")
+    fi
+  done <<<"${out}"
+}
+
+check_shell() {
+  if shellcheck --severity=style -x "${SCRIPTS[@]}"; then
+    record shellcheck ok
+  else
+    record shellcheck failed
+  fi
+}
+
+check_format() {
+  local flag='--diff'
+  if [[ "${FIX}" -eq 1 ]]; then
+    flag='-w'
+  fi
+  if shfmt "${flag}" "${SCRIPTS[@]}"; then
+    record shfmt ok
+  else
+    record shfmt failed
+  fi
+}
+
+check_parse() {
+  local f ok=0
+  for f in "${SCRIPTS[@]}"; do
+    bash -n "${f}" || ok=1
+  done
+  if [[ "${ok}" -eq 0 ]]; then
+    record parse ok
+  else
+    record parse failed
+  fi
+}
+
+check_json() {
+  local f ok=0
+  for f in "${JSON_FILES[@]}"; do
+    jq empty <"${f}" || ok=1
+  done
+  if [[ "${ok}" -eq 0 ]]; then
+    record json ok
+  else
+    record json failed
+  fi
+}
+
+# --strict, because without it a manifest warning passes and the plugin still
+# ships with it.
+check_plugin() {
+  if claude plugin validate --strict "${ROOT}"; then
+    record plugin ok
+  else
+    record plugin failed
+  fi
+}
+
+# --dot, because cspell skips a dotfile by default and most of the prose here
+# lives in one.
+check_spelling() {
+  if cspell lint --no-progress --no-summary --dot --root "${ROOT}" \
+    "${ROOT}/**/*"; then
+    record cspell ok
+  else
+    record cspell failed
+  fi
+}
+
+check_package() {
+  if bats "${ROOT}/tests"; then
+    record bats ok
+  else
+    record bats failed
+  fi
+}
+
+main() {
+  FIX=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
+        return 0
+        ;;
+      --fix) FIX=1 ;;
+      --)
+        shift
+        break
+        ;;
+      -*) usage_error "unknown option '$1'" ;;
+      *) break ;;
+    esac
+    shift
+  done
+  readonly FIX
+
+  [[ $# -eq 0 ]] || usage_error "expected no operands, got $#"
+
+  command -v shellcheck >/dev/null || die 'shellcheck is required'
+
+  command -v shfmt >/dev/null || die 'shfmt is required'
+  command -v jq >/dev/null || die 'jq is required'
+  command -v vale >/dev/null || die 'vale is required'
+  command -v bats >/dev/null || die 'bats is required'
+  command -v cspell >/dev/null || die 'cspell is required'
+  command -v claude >/dev/null || die 'claude is required'
+
+  collect
+
+  check_shell
+  check_format
+  check_parse
+  check_json
+  check_plugin
+  check_spelling
+  check_package
+
+  local r failed=0
+  printf '\n'
+  for r in "${RESULTS[@]}"; do
+    printf '  %-12s %s\n' "${r%%:*}" "${r##*:}"
+    [[ "${r##*:}" == failed ]] && failed=1
+  done
+
+  return "${failed}"
+}
+
+main "$@"

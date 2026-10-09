@@ -1,0 +1,42 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: tools/check
+
+  # release-please picks the next version from each commit's type on main. A
+  # message it can't parse changes what the release says.
+  commits:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - name: Lint the pull request's commits
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: commitlint --from "${BASE}" --to "${HEAD}" --verbose
+      # A first push has no commit before it, and git names that as all zeros.
+      - name: Lint the pushed commits
+        if: ${{ github.event_name == 'push' }}
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [[ "${BEFORE}" =~ ^0+$ ]]; then
+            commitlint --last --verbose
+          else
+            commitlint --from "${BEFORE}" --to "${AFTER}" --verbose
+          fi
