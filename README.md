@@ -155,6 +155,11 @@ Rules the published packages miss:
 | `SourcePath` | A source file named in a comment, which a rename breaks |
 | `FleschReadingEase` | A reading-ease score, gated so short text doesn't report |
 
+It also replaces three upstream rules with copies: `Std.Punctuation.OxfordComma`,
+`Harper.DiscourseMarkers` and `proselint.But`. Vale matches `^` and `$` at
+every line, so each original fires where a hard wrap starts or ends a line.
+Each copy anchors to the whole sentence or paragraph instead.
+
 ### Comments in a source file
 
 Vale reads comments through a tree-sitter grammar and has none for shell. The
@@ -236,6 +241,9 @@ how the shell is written, and what belongs in a comment.
 
 ## License
 
-MIT. [LICENSE](LICENSE) also has the notices for the rule derived from
-[vale-ai-tells](https://github.com/krishnasunkam/vale-ai-tells) and the View
-derived from [Commits](https://github.com/jdkato/commits).
+MIT. [LICENSE](LICENSE) also has the notice for the View derived from
+[Commits](https://github.com/jdkato/commits). It has the notices for the rules
+derived from [vale-ai-tells](https://github.com/krishnasunkam/vale-ai-tells),
+[Std](https://github.com/vale-cli/Std),
+[proselint](https://github.com/vale-cli/proselint), and the
+[Vale Harper style](https://github.com/vale-cli/Harper).

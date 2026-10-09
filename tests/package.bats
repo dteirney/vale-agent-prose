@@ -285,6 +285,44 @@ write_probe() {
   [[ -z "${missing}" ]] || { printf 'no md mapping:%s\n' "${missing}"; return 1; }
 }
 
+# Vale compiles every token in multiline mode, so `^` and `$` match at each line
+# a hard wrap makes. These rules anchor to the whole scope with \A and \z, and
+# their upstream originals, anchored with ^ and $, are off.
+@test "a wrap after a two-item phrase reports no missing serial comma" {
+  run lint $'It judges each alert, as a false positive or a rule\nthat was right.'
+  [[ "${output}" != *'OxfordComma'* ]]
+}
+
+@test "a list missing its serial comma is caught once" {
+  run lint 'The installer copies binaries, styles and vocabularies.'
+  [[ "${output}" == *'AgentProse.OxfordComma'* ]]
+  [[ "${output}" != *'Std.Punctuation.OxfordComma'* ]]
+}
+
+@test "a discourse marker a wrap puts first on a line reports nothing" {
+  run lint $'The hook keeps them per file, and nothing\nhowever small is lost.'
+  [[ "${output}" != *'DiscourseMarkers'* ]]
+}
+
+@test "a sentence opening with a discourse marker is caught once" {
+  run lint 'However the hook keeps them per file.'
+  [[ "${output}" == *'AgentProse.DiscourseMarkers'* ]]
+  [[ "${output}" != *'Harper.DiscourseMarkers'* ]]
+}
+
+@test "a but a wrap puts first on a comment line reports nothing" {
+  run lint_source probe.sh '#!/usr/bin/env bash' \
+    '# The sweep runs at every start and deletes the folder of each dead session.' \
+    '# But it skips a live one.' 'true'
+  [[ "${output}" != *'.But:'* ]]
+}
+
+@test "a paragraph opening with but is caught once" {
+  run lint 'But the sweep skips a live session.'
+  [[ "${output}" == *'AgentProse.But'* ]]
+  [[ "${output}" != *'proselint.But'* ]]
+}
+
 @test "reading ease stays quiet under a hundred words" {
   run lint 'Considerable administrative reorganization necessitated subsequent documentation modifications.'
   [[ "${output}" != *'FleschReadingEase'* ]]

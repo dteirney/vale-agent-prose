@@ -1,0 +1,13 @@
+# proselint.But anchored with \A, where upstream's ^ matches at every line of a hard-wrapped
+# paragraph. The configuration switches the upstream rule off.
+#
+# Derived from proselint, Copyright (c) 2014-2015 Jordan Suchow, Michael Pacer and Lara A. Ross,
+# BSD-3-Clause. See LICENSE.
+extends: existence
+message: "Do not start a paragraph with a 'but'."
+level: error
+scope: paragraph
+action:
+  name: remove
+tokens:
+  - '\ABut'
