@@ -49,7 +49,7 @@ One naming rule breaks the style guide on purpose. A command takes hyphens, `lin
 
 ## How the spelling gate decides
 
-Teach cspell what a file is before you teach it a word. A shell script with no extension reaches no language, so every builtin in it reads as a misspelling. One `languageId` override retires a dozen word entries, and keeps retiring them as the scripts grow. Reach for the word list only for a name no dictionary could hold.
+Teach cspell what a file is before you teach it a word. A shell script with no extension has no language, so cspell flags every builtin in it as a misspelling. One `languageId` override retires a dozen word entries, and keeps retiring them as the scripts grow. Reach for the word list only for a name no dictionary could hold.
 
 ## What belongs in a comment
 
