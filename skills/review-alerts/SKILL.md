@@ -69,7 +69,7 @@ Every switch in `package/.vale.ini` has a comment saying why, so the draft has o
 
 **Repository-only:** show the exact lines for each repository, grouped by repository. Stop at the lines: the user makes the edit.
 
-The review lists the configuration each repository used:
+The review lists the configuration each repository used. A repository that lists two changed its configuration during the period. Draft for the one it has now. Run `vale --no-global ls-config` from its root. Take own configuration when the command succeeds, and default configuration when it reports `no config file found`.
 
 - **own configuration:** run `vale --no-global ls-config` from the repository root. Its `RootINI` field is the file to edit. Show these lines to add to it:
 

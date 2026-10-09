@@ -81,8 +81,10 @@ rank() {
     group_by(.rule)
     | map(map(select(.recheck == "persisted")) as $persisted
       | {rule: .[0].rule, rechecks: length, persisted: ($persisted | length),
-        repositories: ($persisted | group_by([.root, .config])
-          | map({root: .[0].root, config: .[0].config, persisted: length})
+        repositories: ($persisted | group_by(.root)
+          | map({root: .[0].root, persisted: length,
+            configs: (group_by(.config) | sort_by(-length, .[0].config)
+              | map(.[0].config))})
           | sort_by(-.persisted, .root)),
         alerts: ($persisted | group_by([.file, .message, .lines])
           | map(.[0] + {times: length})
@@ -113,7 +115,8 @@ print_rule() {
   local repositories
   repositories="$(jq -r '.repositories[]
     | "  \(.root // "outside any repository"): \(.persisted) persisted,"
-      + " \(.config) configuration"
+      + " \(.configs | join(" and ")) configuration"
+      + (if (.configs | length) > 1 then "s" else "" end)
   ' <<<"${rule}")" || return 1
   if [[ -n "${repositories}" ]]; then
     # shellcheck disable=SC2310  # the caller exits on any failure

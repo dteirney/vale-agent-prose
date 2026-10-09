@@ -92,7 +92,8 @@ ranked() {
 
 # The repository lines the last run printed.
 repositories() {
-  grep -E ': [0-9]+ persisted, (own|default) configuration$' <<<"${output}"
+  grep -E ': [0-9]+ persisted, (own|default)( and (own|default))? configurations?$' \
+    <<<"${output}"
 }
 
 @test "a rule lists each repository its persisted alerts came from, with its configuration" {
@@ -107,6 +108,17 @@ repositories() {
     '  /home/dev/notes: 3 persisted, own configuration' \
     '  /home/dev/site: 1 persisted, default configuration')" ]
   [[ "${output}" != *'/home/dev/other'* ]]
+}
+
+@test "a repository that used two configurations lists once, with both" {
+  {
+    rechecks_of Some.Rule persisted 3
+    rechecks_of Some.Rule persisted 1 | in_repository /home/dev/notes default
+    rechecks_of Some.Rule absent 1
+  } | record_in -home-dev-notes/s1.jsonl
+  run review
+  [ "${status}" -eq 0 ]
+  [ "$(repositories)" = '  /home/dev/notes: 4 persisted, own and default configurations' ]
 }
 
 @test "a rule confined to one repository lists only that one" {
