@@ -22,12 +22,11 @@ source "${SCRIPT_DIR}/../lib/prose.sh"
 
 # Print the file where session $1 saves the alerts it hands back for file $2.
 saved_file() {
-  [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]] || return 1
-  # The session id becomes a folder name.
-  [[ "$1" =~ ^[A-Za-z0-9_-]+$ ]] || return 1
-  local key
+  local dir key
+  # shellcheck disable=SC2310  # the hook exits 0 on any failure
+  dir="$(prose::session_dir "$1")" || return 1
   key="$(git hash-object --stdin <<<"$2")" || return 1
-  printf '%s\n' "${CLAUDE_PLUGIN_DATA}/sessions/$1/${key}.json"
+  printf '%s\n' "${dir}/${key}.json"
 }
 
 # Print a recheck line for each alert saved in $1, then remove it. Vale's JSON
@@ -94,6 +93,8 @@ save_alerts() {
 
   [[ "${alerts}" != '[]' ]] || return 0
   mkdir -p "${1%/*}" || return 1
+  # shellcheck disable=SC2310  # the hook exits 0 on any failure
+  prose::claim_session_dir "${1%/*}" || return 1
   printf '%s\n' "${alerts}" >"$1"
 }
 

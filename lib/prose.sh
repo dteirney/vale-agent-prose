@@ -281,6 +281,36 @@ prose::hook_alerts() {
   printf '[%d more alerts, not shown.]\n' "$((total - max))"
 }
 
+# Print the parent folder of every session's folder.
+prose::sessions_dir() {
+  [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]] || return 1
+  printf '%s\n' "${CLAUDE_PLUGIN_DATA}/sessions"
+}
+
+# Print the folder where the prose hook keeps session $1's alerts.
+prose::session_dir() {
+  # The session id becomes a folder name.
+  [[ "$1" =~ ^[A-Za-z0-9_-]+$ ]] || return 1
+  local root
+  root="$(prose::sessions_dir)" || return 1
+  printf '%s/%s\n' "${root}" "$1"
+}
+
+# Record the caller's parent as the process that owns session folder $1. A hook
+# with args runs with no shell between it and Claude Code, so the parent is the
+# session's process. Through a shell, the parent exits at once.
+prose::claim_session_dir() {
+  printf '%s\n' "${PPID}" >"$1/pid"
+}
+
+# Whether the process that last claimed session folder $1 still runs. A reused
+# process id keeps a folder until that process exits too.
+prose::session_dir_claimed() {
+  local pid=''
+  { read -r pid <"$1/pid"; } 2>/dev/null || return 1
+  [[ "${pid}" =~ ^[0-9]+$ ]] && kill -0 "${pid}" 2>/dev/null
+}
+
 # Print a PostToolUse hook's JSON that hands the alerts back as context. $1
 # is the alerts from prose::hook_alerts, $2 the message that goes above them,
 # and $3 the hook's name.

@@ -43,6 +43,8 @@ default_config() {
 }
 
 teardown() {
+  # A test that takes write access away gives it back here, should it fail.
+  chmod -R u+w "${WORK}"
   rm -rf "${WORK}"
 }
 
@@ -65,6 +67,21 @@ lint_file() {
 edit_in() {
   CLAUDE_PLUGIN_DATA="${CLAUDE_PLUGIN_DATA:-${WORK}/data}" lint_hook \
     <<<"$(printf '{"session_id":"%s","tool_input":{"file_path":"%s"}}' "$1" "$2")"
+}
+
+# An edit like edit_in's, from a Claude Code process that has since exited.
+edit_then_exit() {
+  (
+    edit_in "$1" "$2" &
+    wait
+  )
+}
+
+# Hook event $1 for session $2, sent to the hook that deletes session folders.
+session_event() {
+  CLAUDE_PLUGIN_DATA="${CLAUDE_PLUGIN_DATA:-${WORK}/data}" \
+    "${REPO}/scripts/prune-sessions.sh" \
+    <<<"$(printf '{"hook_event_name":"%s","session_id":"%s"}' "$1" "$2")"
 }
 
 # The rechecks of rule $1 in the last run's stderr, one per line.
@@ -421,5 +438,89 @@ readonly LONG='before it parses the rest of the body and every section after it 
   VALE_CONFIG_PATH="${WORK}/broken.ini" edit_in s1 "${WORK}/notes.md" >/dev/null
   run --separate-stderr edit_in s1 "${WORK}/notes.md"
   [[ "${output}" == *'AgentProse.AbstractTriad'* ]]
+  [ -z "${stderr}" ]
+}
+
+@test "the SessionEnd hook deletes the ending session's alerts" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  run --separate-stderr session_event SessionEnd s1
+  [ "${status}" -eq 0 ]
+  [ -z "${output}" ]
+  [ -z "${stderr}" ]
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ -z "${stderr}" ]
+}
+
+@test "the SessionEnd hook leaves another session's alerts" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  edit_in s2 "${WORK}/notes.md" >/dev/null
+  session_event SessionEnd s2
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "$(rechecks AgentProse.AbstractTriad)" = persisted ]
+}
+
+@test "a session id that names another folder deletes nothing" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  run --separate-stderr session_event SessionEnd ..
+  [ "${status}" -eq 0 ]
+  [ -z "${stderr}" ]
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "$(rechecks AgentProse.AbstractTriad)" = persisted ]
+}
+
+@test "the SessionStart hook deletes the alerts of a session whose process exited" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_then_exit s1 "${WORK}/notes.md" >/dev/null
+  run --separate-stderr session_event SessionStart s2
+  [ "${status}" -eq 0 ]
+  [ -z "${output}" ]
+  [ -z "${stderr}" ]
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ -z "${stderr}" ]
+}
+
+@test "the SessionStart hook leaves the alerts of a live session" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  session_event SessionStart s2
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "$(rechecks AgentProse.AbstractTriad)" = persisted ]
+}
+
+# A crashed session that the user resumes is live again.
+@test "a resumed session's alerts outlast the next session's start" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_then_exit s1 "${WORK}/notes.md" >/dev/null
+  session_event SessionStart s1
+  session_event SessionStart s2
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "$(rechecks AgentProse.AbstractTriad)" = persisted ]
+}
+
+@test "both hooks exit 0 and say nothing when there's no session folder" {
+  run --separate-stderr session_event SessionEnd s1
+  [ "${status}" -eq 0 ]
+  [ -z "${output}" ]
+  [ -z "${stderr}" ]
+  run --separate-stderr session_event SessionStart s1
+  [ "${status}" -eq 0 ]
+  [ -z "${output}" ]
+  [ -z "${stderr}" ]
+}
+
+@test "both hooks exit 0 and say nothing when a folder can't be deleted" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_then_exit s1 "${WORK}/notes.md" >/dev/null
+  chmod -R a-w "${WORK}/data"
+  run --separate-stderr session_event SessionEnd s1
+  [ "${status}" -eq 0 ]
+  [ -z "${output}" ]
+  [ -z "${stderr}" ]
+  run --separate-stderr session_event SessionStart s2
+  [ "${status}" -eq 0 ]
+  [ -z "${output}" ]
   [ -z "${stderr}" ]
 }
