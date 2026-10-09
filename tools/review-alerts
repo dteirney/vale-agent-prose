@@ -18,10 +18,11 @@ source "${SCRIPT_DIR}/../lib/prose.sh"
 # Below this, one persisted alert could put a rule at the top.
 readonly MIN_RECHECKS=5
 readonly DEFAULT_LIMIT=10
+readonly DEFAULT_ALERT_LIMIT=5
 
 usage() {
   cat <<EOF
-usage: ${PROG} [--limit <n>]
+usage: ${PROG} [--limit <n>] [--alert-limit <n>]
        ${PROG} -h
 
 Rank rules by how often their alerts persist, from the rechecks the prose hook
@@ -29,10 +30,12 @@ left in every session transcript under ${CLAUDE_CONFIG_DIR:-~/.claude}/projects.
 Only rechecks from this version of the plugin count, and a rule needs
 ${MIN_RECHECKS} of them to rank. Each rule prints its persistence rate, the
 repositories its persisted alerts came from with the configuration each used,
-then its persisted alerts with their lines.
+then its persisted alerts with their lines, the most frequent first.
 
-  --limit <n>    print at most <n> rules, 0 for all (default ${DEFAULT_LIMIT})
-  -h, --help     print this and exit
+  --limit <n>          print at most <n> rules, 0 for all (default ${DEFAULT_LIMIT})
+  --alert-limit <n>    print at most <n> persisted alerts under each rule, 0
+                       for all (default ${DEFAULT_ALERT_LIMIT})
+  -h, --help           print this and exit
 
 Exit 0 when it reports, 1 when it finds no rechecks, 2 on a usage error.
 EOF
@@ -89,13 +92,21 @@ rank() {
     | .[]'
 }
 
-# Print one rule from rank: its persistence rate, the repositories its
-# persisted alerts came from, then each persisted alert with its lines.
+# Print one rule from rank in $1: its persistence rate, the repositories its
+# persisted alerts came from, then its persisted alerts with their lines.
+# $2 caps the alerts where it isn't 0.
 print_rule() {
-  local fields name persisted rechecks rate
+  local rule fields name persisted rechecks rate left_out
+  rule="$(jq -c --argjson limit "$2" \
+    'if $limit == 0 then . else .alerts |= .[:$limit] end' <<<"$1")" \
+    || return 1
+  # A printed alert stands for every time it persisted, so the alerts left
+  # out are the persisted ones the printed alerts don't account for.
   fields="$(jq -r '[.rule, .persisted, .rechecks,
-    (.persisted * 100 / .rechecks | round)] | @tsv' <<<"$1")" || return 1
-  IFS=$'\t' read -r name persisted rechecks rate <<<"${fields}"
+    (.persisted * 100 / .rechecks | round),
+    .persisted - ([.alerts[].times] | add // 0)] | @tsv' <<<"${rule}")" \
+    || return 1
+  IFS=$'\t' read -r name persisted rechecks rate left_out <<<"${fields}"
   # shellcheck disable=SC2310  # the caller exits on any failure
   prose::message review-alerts/rule "${name}" "${persisted}" "${rechecks}" \
     "${rate}" || return 1
@@ -103,7 +114,7 @@ print_rule() {
   repositories="$(jq -r '.repositories[]
     | "  \(.root // "outside any repository"): \(.persisted) persisted,"
       + " \(.config) configuration"
-  ' <<<"$1")" || return 1
+  ' <<<"${rule}")" || return 1
   if [[ -n "${repositories}" ]]; then
     # shellcheck disable=SC2310  # the caller exits on any failure
     prose::message review-alerts/repositories || return 1
@@ -116,11 +127,17 @@ print_rule() {
       (.line as $at | .lines[]
         | (if .line == $at then "  > " else "    " end) + "\(.line) |"
           + (if .text == "" then "" else " \(.text)" end))
-  ' <<<"$1" || return 1
+  ' <<<"${rule}" || return 1
+  if [[ "${left_out}" -gt 0 ]]; then
+    printf '\n'
+    # shellcheck disable=SC2310  # the caller exits on any failure
+    prose::message review-alerts/more-alerts "${left_out}" || return 1
+  fi
   printf '\n'
 }
 
-# Print the ranked rules in $1, at most $2 of them where $2 isn't 0.
+# Print the ranked rules in $1, at most $2 of them where $2 isn't 0. $3 caps
+# the persisted alerts under each rule where it isn't 0.
 print_rules() {
   local rule shown=0 total
   total="$(wc -l <<<"$1")"
@@ -131,13 +148,13 @@ print_rules() {
       return 0
     fi
     # shellcheck disable=SC2310  # its failures exit here
-    print_rule "${rule}" || die 'cannot print a rule'
+    print_rule "${rule}" "$3" || die 'cannot print a rule'
     shown=$((shown + 1))
   done <<<"$1"
 }
 
 main() {
-  local limit="${DEFAULT_LIMIT}"
+  local limit="${DEFAULT_LIMIT}" alert_limit="${DEFAULT_ALERT_LIMIT}"
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -h | --help)
@@ -148,6 +165,13 @@ main() {
         [[ $# -ge 2 ]] || usage_error '--limit needs a count'
         [[ "$2" =~ ^[0-9]+$ ]] || usage_error "--limit wants a number, got '$2'"
         limit="$2"
+        shift
+        ;;
+      --alert-limit)
+        [[ $# -ge 2 ]] || usage_error '--alert-limit needs a count'
+        [[ "$2" =~ ^[0-9]+$ ]] \
+          || usage_error "--alert-limit wants a number, got '$2'"
+        alert_limit="$2"
         shift
         ;;
       --)
@@ -189,7 +213,7 @@ main() {
       "${version}" "${MIN_RECHECKS}"
     return 0
   fi
-  print_rules "${rules}" "${limit}"
+  print_rules "${rules}" "${limit}" "${alert_limit}"
 }
 
 main "$@"

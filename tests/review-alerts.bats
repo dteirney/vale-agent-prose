@@ -136,6 +136,64 @@ repositories() {
   [[ "${output}" != *"$(<"${REPO}/messages/review-alerts/repositories.txt")"* ]]
 }
 
+# Print $3 persisted recheck lines for rule $1, each from file $2.
+persisted_in() {
+  rechecks_of "$1" persisted "$3" | jq -c --arg file "$2" '.file = $file'
+}
+
+# One rule's persisted alerts, each from its own file.
+seven_alerts() {
+  local i
+  for i in 1 2 3 4 5 6 7; do
+    persisted_in Some.Rule "/home/dev/notes/note-${i}.md" 1
+  done | record_in -home-dev-notes/s1.jsonl
+}
+
+# The alert files the last run printed, joined with commas.
+shown_alerts() {
+  grep -oE '^  /home/dev/notes/note-[0-9]+\.md' <<<"${output}" \
+    | sed 's/^  //' | paste -sd , -
+}
+
+@test "a rule prints five persisted alerts and says how to see the rest" {
+  seven_alerts
+  run review
+  [ "${status}" -eq 0 ]
+  [ "$(shown_alerts | tr ',' '\n' | wc -l | tr -d ' ')" -eq 5 ]
+  [[ "${output}" == *"left out 2 of this rule's persisted alerts"*'--alert-limit'* ]]
+}
+
+@test "--alert-limit keeps the alerts that persisted most, each counted once" {
+  {
+    persisted_in Some.Rule /home/dev/notes/note-9.md 3
+    persisted_in Some.Rule /home/dev/notes/note-1.md 1
+    persisted_in Some.Rule /home/dev/notes/note-2.md 1
+  } | record_in -home-dev-notes/s1.jsonl
+  run review --alert-limit 2
+  [ "${status}" -eq 0 ]
+  [ "$(shown_alerts)" = /home/dev/notes/note-9.md,/home/dev/notes/note-1.md ]
+  [[ "${output}" == *"left out 1 of this rule's persisted alerts"*'--alert-limit'* ]]
+}
+
+@test "an alert left out counts each time it persisted" {
+  {
+    persisted_in Some.Rule /home/dev/notes/note-9.md 3
+    persisted_in Some.Rule /home/dev/notes/note-1.md 2
+  } | record_in -home-dev-notes/s1.jsonl
+  run review --alert-limit 1
+  [ "${status}" -eq 0 ]
+  [ "$(shown_alerts)" = /home/dev/notes/note-9.md ]
+  [[ "${output}" == *"left out 2 of this rule's persisted alerts"* ]]
+}
+
+@test "--alert-limit 0 prints every alert" {
+  seven_alerts
+  run review --alert-limit 0
+  [ "${status}" -eq 0 ]
+  [ "$(shown_alerts | tr ',' '\n' | wc -l | tr -d ' ')" -eq 7 ]
+  [[ "${output}" != *'--alert-limit'* ]]
+}
+
 # Twelve rules that each rank.
 twelve_rules() {
   local i
@@ -215,4 +273,20 @@ twelve_rules() {
 @test "a non-numeric limit is a usage error" {
   run review --limit many
   [ "${status}" -eq 2 ]
+}
+
+@test "a non-numeric alert limit is a usage error" {
+  run review --alert-limit many
+  [ "${status}" -eq 2 ]
+}
+
+@test "an alert limit with no count is a usage error" {
+  run review --alert-limit
+  [ "${status}" -eq 2 ]
+}
+
+@test "--help names the alert limit and its default" {
+  run review --help
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *'--alert-limit <n>'*'default 5'* ]]
 }
