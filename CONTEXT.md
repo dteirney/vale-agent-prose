@@ -15,7 +15,7 @@ alert has at most one.
 _Avoid_: Outcome, result, status, state
 
 **Persisted alert**:
-An alert Vale raises again at the next edit of its file, the same rule on the same flagged words.
+An alert Vale raises again at the next edit of its file: the same rule, message, and flagged words.
 It says nothing about whether the agent chose to keep it.
 _Avoid_: Surviving alert, dismissed alert, kept alert
 

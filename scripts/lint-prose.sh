@@ -37,14 +37,15 @@ recheck() {
   report="$(cat)" || return 1
 
   # Each alert matches one occurrence of its rule on its flagged words, so
-  # two alerts on the same words need two occurrences to persist.
+  # two alerts on the same words need two occurrences to persist. A metric
+  # rule flags no words, so the key adds the message, which has the value.
   local defs rechecks=''
   # shellcheck disable=SC2310  # the hook exits 0 on any failure
   if [[ -n "${report}" ]] && defs="$(prose::vale_jq)"; then
     rechecks="$(jq -c --slurpfile saved "$1" "${defs}"'
-      reduce (alerts | [.Check, .Match] | tojson) as $k ({}; .[$k] += 1)
+      reduce (alerts | [.Check, .Message, .Match] | tojson) as $k ({}; .[$k] += 1)
       | reduce $saved[0][] as $alert ({left: ., out: []};
-        ([$alert.rule, $alert.match] | tojson) as $k
+        ([$alert.rule, $alert.message, $alert.match] | tojson) as $k
         | if (.left[$k] // 0) > 0
           then .left[$k] -= 1 | .out += [{recheck: "persisted"} + $alert]
           else .out += [{recheck: "absent"} + $alert]

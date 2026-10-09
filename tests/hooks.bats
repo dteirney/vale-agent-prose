@@ -341,6 +341,19 @@ readonly LONG='before it parses the rest of the body and every section after it 
   [ "$(rechecks AgentProse.AbstractTriad | sort | paste -sd , -)" = absent,persisted ]
 }
 
+readonly LONG_A='This sentence keeps going and going with clause after clause after clause so that it sails far past the twenty-five word threshold the rule enforces here.'
+readonly LONG_B='This sentence keeps going and going with clause after clause after clause so that it sails far past the twenty-five word threshold the rule enforces here every single time.'
+
+# Vale names only a long sentence's first word, so the message tells them apart.
+@test "a fixed long sentence reports absent beside another that starts the same" {
+  printf '%s\n\n%s\n' "${LONG_A}" "${LONG_B}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf 'Short.\n\n%s\n' "${LONG_B}" >"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "$(jq -r 'select(.rule == "Std.Readability.SentenceLength" and .line == 1) | .recheck' <<<"${stderr}")" = absent ]
+  [ "$(jq -r 'select(.rule == "Std.Readability.SentenceLength" and .line == 3) | .recheck' <<<"${stderr}")" = persisted ]
+}
+
 # The hook hands back only what the edit touched, and the recheck reads the
 # whole file.
 @test "an alert on a line the next edit didn't touch reports persisted" {
