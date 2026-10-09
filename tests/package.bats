@@ -340,6 +340,11 @@ write_probe() {
   [[ "${output}" != *'OxfordComma'* ]]
 }
 
+@test "a clause opening with whether reports no missing serial comma" {
+  run lint 'From then on, every commit in every repository runs the check, whether the agent commits or you do.'
+  [[ "${output}" != *'OxfordComma'* ]]
+}
+
 @test "a list after such as still misses its serial comma" {
   run lint 'The cache holds small files, such as configs, locks and logs.'
   [[ "${output}" == *'AgentProse.OxfordComma'* ]]
