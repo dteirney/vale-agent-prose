@@ -1,8 +1,8 @@
 # vale-agent-prose
 
-Prose linting for the text an agent writes: markdown, the comments in a source file, and a commit message.
+An AI slop linter for the prose a coding agent writes: markdown, the comments in a source file, and a commit message. It flags the tells of large language model (LLM) writing, such as abstract-noun triads, filler adverbs and clichés.
 
-It ships two things. A Claude Code plugin that lints every file the agent writes and hands the alerts back to it. A [Vale](https://vale.sh) package that the plugin runs. It combines the published style packages and switches off the rules that only add noise.
+It ships two things. A Claude Code plugin that lints every file the agent writes and hands the alerts back to it. A [Vale](https://vale.sh) package that the plugin runs. It combines [vale-ai-tells](https://github.com/krishnasunkam/vale-ai-tells), [vale-llm-slop](https://github.com/Syntaf/vale-llm-slop), [Std](https://github.com/vale-cli/Std), Google, [Harper](https://github.com/vale-cli/Harper), [proselint](https://github.com/vale-cli/proselint) and write-good, and switches off the rules that only add noise.
 
 ## The Claude Code plugin
 

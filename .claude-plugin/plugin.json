@@ -1,6 +1,6 @@
 {
   "name": "vale-agent-prose",
-  "description": "Lints the prose an agent writes, as it writes it. A Vale configuration that combines the published style packages and switches off the rules that repeat each other, and a PostToolUse hook that reports only alerts on the lines the edit added.",
+  "description": "Lints the AI slop in the prose an agent writes, as it writes it. A Vale configuration that combines the published style packages and switches off the rules that repeat each other, and a PostToolUse hook that reports the alerts in each paragraph or comment the edit touched.",
   "version": "0.1.0",
   "author": {
     "name": "David Teirney"
