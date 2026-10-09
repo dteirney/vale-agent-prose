@@ -1,0 +1,9 @@
+version: 2
+updates:
+  # The workflows pin each action by commit, so nothing else moves it.
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/*"]
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci

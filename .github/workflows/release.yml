@@ -15,13 +15,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v5
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
 
       # The build and the upload run here, because a tag that release-please
       # creates with the workflow's own token starts no other workflow.
       - if: ${{ steps.release.outputs.release_created }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - if: ${{ steps.release.outputs.release_created }}
         uses: ./.github/actions/setup
       - if: ${{ steps.release.outputs.release_created }}
