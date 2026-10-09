@@ -1,0 +1,1 @@
+This directory has no Vale configuration, and the plugin's default configuration has no styles yet. Run /vale-agent-prose:setup.

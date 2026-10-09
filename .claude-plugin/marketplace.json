@@ -1,0 +1,18 @@
+{
+  "name": "vale-agent-prose",
+  "description": "Prose linting for the text an agent writes.",
+  "owner": {
+    "name": "David Teirney"
+  },
+  "plugins": [
+    {
+      "name": "vale-agent-prose",
+      "source": "./",
+      "description": "Lints the prose an agent writes, as it writes it.",
+      "version": "0.1.0",
+      "author": {
+        "name": "David Teirney"
+      }
+    }
+  ]
+}

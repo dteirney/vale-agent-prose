@@ -1,0 +1,1 @@
+Vale found a configuration here, but you haven't synced the styles it lists. Run /vale-agent-prose:setup.

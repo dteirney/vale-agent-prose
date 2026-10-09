@@ -1,0 +1,1 @@
+vale-agent-prose: jq isn't on the PATH, so the prose hook reports nothing. If the hook reports nothing, that doesn't mean the prose is clean.

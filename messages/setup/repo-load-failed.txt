@@ -1,0 +1,2 @@
+Vale can't load this directory's configuration, and said this:
+%s

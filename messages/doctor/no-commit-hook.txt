@@ -1,0 +1,1 @@
+Nothing checks your commit messages, because your global git configuration has no hook for the check. Run /vale-agent-prose:setup.

@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+#
+# Set up everything the plugin needs outside its own directory. The setup
+# skill runs this from the session's working directory.
+#
+#   tools/setup install ~/.claude/plugins/data/<id>
+set -euo pipefail
+IFS=$'\n\t'
+
+readonly PROG="${0##*/}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+
+# shellcheck source=lib/prose.sh
+source "${SCRIPT_DIR}/../lib/prose.sh"
+
+usage() {
+  cat <<EOF
+usage: ${PROG} install <dir>
+       ${PROG} remove
+       ${PROG} -h
+
+Set up the prose checks for this machine and this repository.
+
+  install <dir>   add the commit-msg hook to your global git configuration.
+                  Sync the default Vale configuration into <dir>. Sync the
+                  styles that this repository's own Vale configuration lists.
+  remove          take the commit-msg hook out of your global git
+                  configuration
+
+<dir> is the plugin's data directory. Each install step runs even when an
+earlier one fails, and the output names each step's result.
+
+  -h, --help   print this and exit
+
+Exit 0 when every step succeeds, 1 when any step fails, 2 on a usage error.
+EOF
+}
+
+usage_error() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  usage >&2
+  exit 2
+}
+
+# Sync the styles the working directory's own Vale configuration lists. A
+# directory with none of its own uses the default configuration instead.
+#
+# The sync runs before the load check, because a fresh clone's configuration
+# fails to load until the sync creates its StylesPath.
+sync_repository() {
+  local err
+  if err="$(vale --no-global ls-config 2>&1 >/dev/null)" \
+    || [[ "${err}" != *'no config file found'* ]]; then
+    if ! vale --no-global sync >/dev/null; then
+      prose::message setup/repo-sync-failed >&2
+      return 1
+    fi
+    if ! err="$(vale --no-global ls-config 2>&1 >/dev/null)"; then
+      prose::message setup/repo-load-failed "${err}" >&2
+      return 1
+    fi
+    prose::message setup/repo-synced
+    return 0
+  fi
+  prose::message setup/default-applies
+}
+
+install() {
+  local dir="$1" failed=0
+
+  "${SCRIPT_DIR}/commit-hook" install "${dir}" || failed=1
+
+  if "${SCRIPT_DIR}/../scripts/sync-default-config.sh" "${dir}"; then
+    prose::message setup/default-current "${dir}/vale"
+  else
+    failed=1
+  fi
+
+  # shellcheck disable=SC2310  # the failure is handled on the same line
+  sync_repository || failed=1
+
+  return "${failed}"
+}
+
+main() {
+  [[ $# -gt 0 ]] || usage_error 'expected a subcommand'
+  case "$1" in
+    -h | --help)
+      usage
+      return 0
+      ;;
+    install)
+      [[ $# -eq 2 ]] || usage_error "install expects one directory, got $(($# - 1))"
+      [[ -n "$2" ]] || usage_error 'install expects a directory'
+      ;;
+    remove)
+      [[ $# -eq 1 ]] || usage_error 'remove takes no operand'
+      ;;
+    *) usage_error "unknown subcommand '$1'" ;;
+  esac
+
+  command -v vale >/dev/null || {
+    printf '%s: vale is required\n' "${PROG}" >&2
+    exit 1
+  }
+
+  case "$1" in
+    install) install "$2" ;;
+    remove) exec "${SCRIPT_DIR}/commit-hook" remove ;;
+    *) ;;
+  esac
+}
+
+main "$@"

@@ -1,0 +1,1 @@
+vale-agent-prose: jq isn't on the PATH, so the prose hook reports nothing until you install it. The next session reports any other problem.

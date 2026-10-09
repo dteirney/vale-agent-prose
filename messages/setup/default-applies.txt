@@ -1,0 +1,1 @@
+This directory has no Vale configuration of its own, so the default one applies.

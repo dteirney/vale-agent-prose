@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+#
+# Check that the prose checks can run here, and change nothing. The
+# SessionStart hook and the doctor skill both run this.
+#
+#   tools/doctor ~/.claude/plugins/data/<id>
+set -euo pipefail
+IFS=$'\n\t'
+
+readonly PROG="${0##*/}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+
+# shellcheck source=lib/prose.sh
+source "${SCRIPT_DIR}/../lib/prose.sh"
+
+# Before this release Vale placed a script rule's match by its offset in the
+# paragraph, not in the file. The prose hook then filtered findings by the
+# wrong line.
+readonly MIN_VALE='3.23.0'
+
+# Git reads a hook from its configuration only from this release on, and the
+# commit message check is one.
+readonly MIN_GIT='2.54.0'
+
+usage() {
+  cat <<EOF
+usage: ${PROG} [<dir>]
+       ${PROG} -h
+
+Check that the prose hook and the commit message check can run in this
+directory, and change nothing. Each problem prints as one line, with the
+step that fixes it.
+
+<dir> is the plugin's data directory, which holds the default Vale
+configuration. Without it, a directory with no Vale configuration of its own
+reports as a problem.
+
+  -h, --help   print this and exit
+
+Exit 0 when nothing is wrong, 1 when it reports a problem, 2 on a usage error.
+EOF
+}
+
+usage_error() {
+  printf '%s: %s\n' "${PROG}" "$1" >&2
+  usage >&2
+  exit 2
+}
+
+# Print the first x.y.z in what a --version flag printed, or nothing.
+version_in() {
+  if [[ "$1" =~ ([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+    printf '%s' "${BASH_REMATCH[1]}"
+  fi
+}
+
+# Whether version $2 is at least version $1.
+at_least() {
+  printf '%s\n%s\n' "$1" "$2" | sort -V -C
+}
+
+# Whether the Vale configuration in force names no style it can load.
+# shellcheck disable=SC2312  # the caller only reads the status
+names_no_style() {
+  vale --no-global ls-config 2>/dev/null \
+    | jq -e '(.SBaseStyles | length) == 0 and .GBaseStyles == null' >/dev/null
+}
+
+check_tools() {
+  if ! command -v jq >/dev/null 2>&1; then
+    prose::message doctor/jq-missing
+  fi
+  if ! command -v vale >/dev/null 2>&1; then
+    prose::message doctor/vale-missing
+  fi
+}
+
+# An unsynced package isn't an error to Vale: it loads, names no styles, and
+# reports nothing on every file.
+check_vale() {
+  command -v vale >/dev/null 2>&1 || return 0
+
+  local out version
+  out="$(vale --version 2>/dev/null)" || out=''
+  version="$(version_in "${out}")"
+  # shellcheck disable=SC2310  # a sort failure reads as too old, which is safe
+  if [[ -n "${version}" ]] && ! at_least "${MIN_VALE}" "${version}"; then
+    prose::message doctor/vale-too-old "${version}" "${MIN_VALE}"
+  fi
+
+  local default_config=''
+  if [[ -n "$1" ]]; then
+    default_config="$1/vale/.vale.ini"
+  fi
+  prose::use_default_config "${default_config}"
+
+  if ! vale --no-global ls-config >/dev/null 2>&1; then
+    prose::message doctor/no-config
+    return 0
+  fi
+  command -v jq >/dev/null 2>&1 || return 0
+  # shellcheck disable=SC2310  # a failure reads as no style, which warns
+  if ! names_no_style; then
+    return 0
+  fi
+  if [[ -n "${default_config}" && "${VALE_CONFIG_PATH:-}" == "${default_config}" ]]; then
+    prose::message doctor/default-unsynced
+  else
+    prose::message doctor/repo-unsynced
+  fi
+}
+
+check_git() {
+  command -v git >/dev/null 2>&1 || return 0
+
+  local out version
+  out="$(git --version 2>/dev/null)" || out=''
+  version="$(version_in "${out}")"
+  # shellcheck disable=SC2310  # a sort failure reads as too old, which is safe
+  if [[ -n "${version}" ]] && ! at_least "${MIN_GIT}" "${version}"; then
+    prose::message doctor/git-too-old "${version}" "${MIN_GIT}"
+  elif ! git config get --global hook.vale-agent-prose.command >/dev/null 2>&1; then
+    prose::message doctor/no-commit-hook
+  fi
+}
+
+main() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
+        return 0
+        ;;
+      --)
+        shift
+        break
+        ;;
+      -*) usage_error "unknown option '$1'" ;;
+      *) break ;;
+    esac
+    shift
+  done
+  [[ $# -le 1 ]] || usage_error "expected at most one directory, got $#"
+
+  local problems
+  problems="$(
+    check_tools
+    check_vale "${1:-}"
+    check_git
+  )"
+
+  [[ -n "${problems}" ]] || return 0
+  printf '%s\n' "${problems}"
+  return 1
+}
+
+main "$@"

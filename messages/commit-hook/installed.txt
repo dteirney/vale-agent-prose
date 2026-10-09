@@ -1,0 +1,1 @@
+The commit-msg hook %s runs %s in every repository.

@@ -1,0 +1,1 @@
+git %s is older than %s, which is too old to run the commit message check. Upgrade git.

@@ -1,0 +1,1 @@
+Removed the %s hook from your global git configuration.

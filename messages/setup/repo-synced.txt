@@ -1,0 +1,1 @@
+Synced the styles this directory's Vale configuration lists.

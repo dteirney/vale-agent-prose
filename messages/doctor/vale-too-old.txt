@@ -1,0 +1,1 @@
+Vale %s is older than %s, and it reports some findings on the wrong line. Upgrade Vale.

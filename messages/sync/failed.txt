@@ -1,0 +1,1 @@
+Vale couldn't download the styles for the default configuration. Run `vale --config='%s' sync` to see why.

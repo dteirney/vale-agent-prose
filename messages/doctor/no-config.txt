@@ -1,0 +1,1 @@
+Vale can't load a configuration in this directory. Run /vale-agent-prose:setup to fix it or see why.
