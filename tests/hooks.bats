@@ -405,6 +405,7 @@ readonly LONG='before it parses the rest of the body and every section after it 
   [[ "$(jq -r .message <<<"${line}")" == 'Abstract-noun triad'* ]]
   [ "$(jq -r .file <<<"${line}")" = "$(pwd -P)/notes.md" ]
   [ "$(jq -r .type <<<"${line}")" = md ]
+  [ "$(jq -r .line <<<"${line}")" = 2 ]
   [ "$(jq -c '[.lines[].line]' <<<"${line}")" = '[1,2,3]' ]
   [ "$(jq -r '.lines[1].text' <<<"${line}")" = "${TRIAD}" ]
   [ "$(jq -r .root <<<"${line}")" = "$(pwd -P)" ]

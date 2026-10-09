@@ -84,7 +84,7 @@ save_alerts() {
       | ($handed_back | split("\n") | INDEX(.)) as $lines
       | [alerts | select($lines[line])
         | {rule: .Check, message: .Message, match: .Match, file: $file,
-          type: (if $type == "" then null else $type end),
+          type: (if $type == "" then null else $type end), line: .Line,
           lines: [range([.Line - 1, 1] | max; [.Line + 1, ($src | length)] | min + 1)
             | {line: ., text: $src[. - 1]}],
           root: (if $root == "" then null else $root end),
