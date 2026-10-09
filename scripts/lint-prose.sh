@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# PostToolUse hook: lint the prose the agent wrote and hand back only what
-# lands on lines this edit added.
+# PostToolUse hook: lint the prose the agent wrote and hand back only the
+# alerts in each paragraph or comment this edit touched.
 #
 # PostToolUse can't block, because the write already happened, so
 # additionalContext is the whole mechanism. Moving this to PreToolUse to deny
-# would be worse: a false deny teaches the agent to route around the hook, and
+# would be worse. A false deny teaches the agent to route around the hook, and
 # a prose alert needs judgement.
 #
 # Every guard below exits 0, because a hook that can't read its input must
