@@ -195,7 +195,7 @@ The commit message hook runs a copy of the check that the plugin keeps in its da
 
 ## Contributing
 
-Read [AGENTS.md](AGENTS.md). It covers the gate, how a command here behaves, how the shell is written, and what belongs in a comment. `tools/check` is the gate, and this repository's own `githooks/commit-msg` runs `tools/lint-commit-prose`.
+Read [CONTRIBUTING.md](.github/CONTRIBUTING.md) to set up a checkout. [AGENTS.md](AGENTS.md) covers how a command here behaves, how the shell is written, and what belongs in a comment. `tools/check` is the gate, and this repository's own `githooks/commit-msg` runs `tools/lint-commit-prose`.
 
 ## License
 
