@@ -220,6 +220,14 @@ twelve_rules() {
   [[ "${output}" != *'--limit'* ]]
 }
 
+@test "a zero-padded limit counts in decimal" {
+  twelve_rules
+  run review --limit 08
+  [ "${status}" -eq 0 ]
+  [ "$(ranked | tr ',' '\n' | wc -l | tr -d ' ')" -eq 8 ]
+  [[ "${output}" != *'value too great'* ]]
+}
+
 @test "a record in a subagent's transcript counts" {
   rechecks_of Some.Rule persisted 3 | record_in -home-dev-notes/s1.jsonl
   rechecks_of Some.Rule persisted 2 \

@@ -164,7 +164,8 @@ main() {
       --limit)
         [[ $# -ge 2 ]] || usage_error '--limit needs a count'
         [[ "$2" =~ ^[0-9]+$ ]] || usage_error "--limit wants a number, got '$2'"
-        limit="$2"
+        # Bash arithmetic reads a leading zero as octal, and 08 isn't octal.
+        limit="$((10#$2))"
         shift
         ;;
       --alert-limit)
