@@ -1,0 +1,1 @@
+Its persisted alerts came from these repositories, with the Vale configuration each one used:

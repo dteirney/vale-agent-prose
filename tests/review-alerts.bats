@@ -37,6 +37,12 @@ rechecks_of() {
   done
 }
 
+# Move each recheck line on stdin to repository $1, under configuration $2.
+in_repository() {
+  jq -c --arg root "$1" --arg config "$2" \
+    '.root = $root | .config = $config | .file = $root + "/notes.md"'
+}
+
 # Append a prose hook record to transcript $1 in the projects folder, with
 # stdin as the hook's stderr.
 record_in() {
@@ -82,6 +88,52 @@ ranked() {
   [ "${status}" -eq 0 ]
   [[ "${output}" == *'/home/dev/notes/notes.md'*'    1 | Intro.'*'  > 2 | The gate needs clarity, discipline, and rigor before anyone trusts it.'* ]]
   [[ "${output}" != *'names no span'* ]]
+}
+
+# The repository lines the last run printed.
+repositories() {
+  grep -E ': [0-9]+ persisted, (own|default) configuration$' <<<"${output}"
+}
+
+@test "a rule lists each repository its persisted alerts came from, with its configuration" {
+  {
+    rechecks_of Some.Rule persisted 3
+    rechecks_of Some.Rule persisted 1 | in_repository /home/dev/site default
+    rechecks_of Some.Rule absent 2 | in_repository /home/dev/other default
+  } | record_in -home-dev-notes/s1.jsonl
+  run review
+  [ "${status}" -eq 0 ]
+  [ "$(repositories)" = "$(printf '%s\n' \
+    '  /home/dev/notes: 3 persisted, own configuration' \
+    '  /home/dev/site: 1 persisted, default configuration')" ]
+  [[ "${output}" != *'/home/dev/other'* ]]
+}
+
+@test "a rule confined to one repository lists only that one" {
+  {
+    rechecks_of Some.Rule persisted 4
+    rechecks_of Some.Rule absent 1
+  } | record_in -home-dev-notes/s1.jsonl
+  run review
+  [ "${status}" -eq 0 ]
+  [ "$(repositories)" = '  /home/dev/notes: 4 persisted, own configuration' ]
+}
+
+@test "an alert from a file outside any repository lists as outside any repository" {
+  rechecks_of Some.Rule persisted 5 \
+    | jq -c '.root = null | .config = "default"' \
+    | record_in -home-dev/s1.jsonl
+  run review
+  [ "${status}" -eq 0 ]
+  [ "$(repositories)" = '  outside any repository: 5 persisted, default configuration' ]
+}
+
+@test "a rule with no persisted alert lists no repositories" {
+  rechecks_of Some.Rule absent 5 | record_in -home-dev-notes/s1.jsonl
+  run review
+  [ "${status}" -eq 0 ]
+  [ "$(ranked)" = Some.Rule ]
+  [[ "${output}" != *"$(<"${REPO}/messages/review-alerts/repositories.txt")"* ]]
 }
 
 # Twelve rules that each rank.

@@ -27,8 +27,9 @@ usage: ${PROG} [--limit <n>]
 Rank rules by how often their alerts persist, from the rechecks the prose hook
 left in every session transcript under ${CLAUDE_CONFIG_DIR:-~/.claude}/projects.
 Only rechecks from this version of the plugin count, and a rule needs
-${MIN_RECHECKS} of them to rank. Each rule prints its persistence rate, then its
-persisted alerts with their lines.
+${MIN_RECHECKS} of them to rank. Each rule prints its persistence rate, the
+repositories its persisted alerts came from with the configuration each used,
+then its persisted alerts with their lines.
 
   --limit <n>    print at most <n> rules, 0 for all (default ${DEFAULT_LIMIT})
   -h, --help     print this and exit
@@ -77,6 +78,9 @@ rank() {
     group_by(.rule)
     | map(map(select(.recheck == "persisted")) as $persisted
       | {rule: .[0].rule, rechecks: length, persisted: ($persisted | length),
+        repositories: ($persisted | group_by([.root, .config])
+          | map({root: .[0].root, config: .[0].config, persisted: length})
+          | sort_by(-.persisted, .root)),
         alerts: ($persisted | group_by([.file, .message, .lines])
           | map(.[0] + {times: length})
           | sort_by(-.times, .file, .lines[0].line))})
@@ -85,8 +89,8 @@ rank() {
     | .[]'
 }
 
-# Print one rule from rank: its persistence rate, then each persisted alert
-# with its lines.
+# Print one rule from rank: its persistence rate, the repositories its
+# persisted alerts came from, then each persisted alert with its lines.
 print_rule() {
   local fields name persisted rechecks rate
   fields="$(jq -r '[.rule, .persisted, .rechecks,
@@ -95,6 +99,16 @@ print_rule() {
   # shellcheck disable=SC2310  # the caller exits on any failure
   prose::message review-alerts/rule "${name}" "${persisted}" "${rechecks}" \
     "${rate}" || return 1
+  local repositories
+  repositories="$(jq -r '.repositories[]
+    | "  \(.root // "outside any repository"): \(.persisted) persisted,"
+      + " \(.config) configuration"
+  ' <<<"$1")" || return 1
+  if [[ -n "${repositories}" ]]; then
+    # shellcheck disable=SC2310  # the caller exits on any failure
+    prose::message review-alerts/repositories || return 1
+    printf '%s\n' "${repositories}"
+  fi
   jq -r '.alerts[]
     | "",
       "  \(.file)\(if .times > 1 then " (persisted \(.times) times)" else "" end)",
