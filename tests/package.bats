@@ -335,6 +335,16 @@ write_probe() {
   [[ "${output}" != *'AgentProse.InanimateVerb'* ]]
 }
 
+@test "two examples after such as report no missing serial comma" {
+  run lint 'It is repository-only when its prose produces it, such as its domain words or its house register.'
+  [[ "${output}" != *'OxfordComma'* ]]
+}
+
+@test "a list after such as still misses its serial comma" {
+  run lint 'The cache holds small files, such as configs, locks and logs.'
+  [[ "${output}" == *'AgentProse.OxfordComma'* ]]
+}
+
 @test "a list wrapped before its last item still misses its serial comma" {
   run lint $'The installer copies binaries, styles and\nvocabularies.'
   [[ "${output}" == *'AgentProse.OxfordComma'* ]]
