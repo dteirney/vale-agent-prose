@@ -40,6 +40,17 @@ Rules the published packages miss:
 
 It also replaces four upstream rules with copies. `AbstractTriad` copies `AiTells.AbstractTriad`, and widens it to catch three abstract nouns joined by `or`. The others copy `Std.Punctuation.OxfordComma`, `Harper.DiscourseMarkers` and `proselint.But`. Vale matches `^` and `$` at every line, so each original fires where a hard wrap starts or ends a line. Each copy anchors to the whole sentence or paragraph instead.
 
+### An opinionated configuration
+
+The package combines seven published styles: vale-ai-tells, vale-llm-slop, Std, Google, Harper, proselint and write-good. It then switches off the rules that:
+
+- repeat another rule's alert on the same words, keeping the one whose message says what to do
+- fire on correct prose, such as write-good's E-Prime rule, which flags every `is`
+- ask for a typographic character, such as an en dash or a one-character ellipsis
+- check spelling, which cspell does instead
+
+`package/.vale.ini` gives the reason beside each switch. Your own `.vale.ini` loads last, so a rule you set to `YES` there comes back on.
+
 ## Quick start with Claude Code
 
 The plugin needs:
