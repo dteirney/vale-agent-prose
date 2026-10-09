@@ -7,6 +7,9 @@
 #
 # Vale joins the raw entries into one expression, so each one after the first opens with a pipe.
 #
+# The gap between two words is `[^\S\n]*\s[^\S\n]*`, which crosses the one line break a hard wrap
+# leaves and never a blank line. A literal space misses every phrase a wrap splits.
+#
 # The entries differ by how much context each verb needs. The first two take any, because these
 # forms are rarely a noun. The third names the objects it takes, since a bare `names` would fire on
 # every "naming convention" and on the imperative "Name your source". The fourth needs a determiner
@@ -19,5 +22,5 @@ ignorecase: true
 raw:
   - '\b(?:carries|carrying|carried|holds|holding)\b'
   - '|\b(?:reaches|reaching|enables|enabling|unlocks|unlocking|governs|governing|dictates|dictating)\b'
-  - '|\b(?:names|naming) (?:it|them|none|one|which)\b'
-  - '|\b(?:drives|driving|powers|powering|surfaces|surfacing|demands|demanding) (?:a|an|the|its|each|every)\b'
+  - '|\b(?:names|naming)[^\S\n]*\s[^\S\n]*(?:it|them|none|one|which)\b'
+  - '|\b(?:drives|driving|powers|powering|surfaces|surfacing|demands|demanding)[^\S\n]*\s[^\S\n]*(?:a|an|the|its|each|every)\b'

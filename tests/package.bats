@@ -323,6 +323,33 @@ write_probe() {
   [[ "${output}" != *'proselint.But'* ]]
 }
 
+# A literal space in a token can't match the line break a hard wrap leaves, so
+# these rules span their gaps with one that crosses a single line break.
+@test "an inanimate verb wrapped before its object is caught" {
+  run lint $'The release job drives\nthe build for every package.'
+  [[ "${output}" == *'AgentProse.InanimateVerb'* ]]
+}
+
+@test "a blank line between the verb and its object reports nothing" {
+  run lint $'The release job drives\n\nthe build for every package.'
+  [[ "${output}" != *'AgentProse.InanimateVerb'* ]]
+}
+
+@test "a list wrapped before its last item still misses its serial comma" {
+  run lint $'The installer copies binaries, styles and\nvocabularies.'
+  [[ "${output}" == *'AgentProse.OxfordComma'* ]]
+}
+
+@test "a discourse marker wrapped inside its phrase is caught" {
+  run lint $'On the other\nhand we could delay the deployment.'
+  [[ "${output}" == *'AgentProse.DiscourseMarkers'* ]]
+}
+
+@test "a discourse marker wrapped before its clause is caught" {
+  run lint $'For example\nI recommend updating the configuration.'
+  [[ "${output}" == *'AgentProse.DiscourseMarkers'* ]]
+}
+
 @test "reading ease stays quiet under a hundred words" {
   run lint 'Considerable administrative reorganization necessitated subsequent documentation modifications.'
   [[ "${output}" != *'FleschReadingEase'* ]]
