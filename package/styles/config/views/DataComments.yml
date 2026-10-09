@@ -1,0 +1,11 @@
+# The comments in a YAML or TOML file, read as markdown.
+#
+# Vale lints these comments on its own beside whatever a View selects, so a
+# View that selects the comments too reports each finding twice. Without any
+# View, Vale reads the whole file as plain text, string values included. A
+# tree-sitter View reads the file as code instead, and only this query's
+# matches reach the rules.
+engine: tree-sitter
+scopes:
+  - expr: (comment)+ @comment
+    type: md

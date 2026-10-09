@@ -1,0 +1,23 @@
+# An inanimate subject taking an active verb is the clearest single marker of agent-written prose,
+# and it survives every other rule here. AiTells.Passive is the nearest one and misses it: its
+# pattern needs a be verb, so "Metadata carried by each column" gives it nothing to match.
+#
+# The level is suggestion because a freight domain says "the vehicle carrying the load" correctly.
+# The fix needs the meaning of the line, which no matcher has.
+#
+# Vale joins the raw entries into one expression, so each one after the first opens with a pipe.
+#
+# The entries differ by how much context each verb needs. The first two take any, because these
+# forms are rarely a noun. The third names the objects it takes, since a bare `names` would fire on
+# every "naming convention" and on the imperative "Name your source". The fourth needs a determiner
+# after the verb, because drives, powers, surfaces and demands are all common plural nouns, and a
+# verb taking a determiner-led object is the reading that isn't one.
+extends: existence
+message: "'%s': where the subject can't act, use is, has, with or from."
+level: suggestion
+ignorecase: true
+raw:
+  - '\b(?:carries|carrying|carried|holds|holding)\b'
+  - '|\b(?:reaches|reaching|enables|enabling|unlocks|unlocking|governs|governing|dictates|dictating)\b'
+  - '|\b(?:names|naming) (?:it|them|none|one|which)\b'
+  - '|\b(?:drives|driving|powers|powering|surfaces|surfacing|demands|demanding) (?:a|an|the|its|each|every)\b'

@@ -1,0 +1,20 @@
+# Vale has no tree-sitter grammar for shell, so a source file drops through to whole-file prose and
+# its code gets linted. TextFSM needs no grammar: it reads any file the section matches through a
+# state machine of regular expressions, so a `#` comment is all it has to recognize.
+#
+# A shellcheck directive is an instruction to shellcheck, and shellcheck checks the path in
+# `source=` itself. Only the reason after a second `#` is prose.
+engine: textfsm
+template: |
+  Value List Comment (.*)
+
+  Start
+    ^#! -> Next
+    ^\s*#\s*shellcheck\s[^#]*#\s*${Comment}
+    ^\s*#\s*shellcheck\s -> Next
+    ^\s*#\s*${Comment}
+scopes:
+  # Without a type the comment reads as plain lines, and no sentence or paragraph rule applies to it.
+  - name: comment
+    expr: Comment
+    type: md

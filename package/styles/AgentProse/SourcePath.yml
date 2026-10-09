@@ -1,0 +1,17 @@
+# A comment naming a source file breaks the moment someone renames that file, and no build catches
+# it. AiTells.FilePath is the nearest rule and doesn't reach this: it targets documentation prose,
+# and of the source extensions Vale reads comments from it lists only js. Both rules stay on, and
+# they overlap on a .js path alone.
+#
+# The extension list below matches the sections that turn this rule on, so a comment in any file
+# Vale reads is checked against every source extension it could name.
+extends: existence
+message: "Source file '%s' named in a comment: a rename breaks it and no build catches it."
+level: error
+ignorecase: true
+raw:
+  - '\b[\w.-]+/[\w./-]*\.(?:bash|bsh|cc|cjs|clj|cljc|cljd|cljs|cpp|cpy|cs|csx|css|cxx|ex|exs|go|gemspec|hpp|hs|java|jl|js|jsx|less|lua|mjs|php|pl|pm|pod|proto|ps1|psd1|psm1|py|py3|pyw|qml|rb|rpy|rs|sass|sbt|scala|scss|sh|swift|ts|tsx|vue|zsh)\b'
+  # The bare-filename form drops sh, rs and pl, because each is also a top-level
+  # domain and RE2 has no lookbehind to tell `deploy.sh` from `docs.vale.sh`. A
+  # file named with its directory still matches the path form above.
+  - '|\b[\w-]{3,}\.(?:bash|bsh|cc|cjs|clj|cljc|cljd|cljs|cpp|cpy|cs|csx|css|cxx|ex|exs|go|gemspec|hpp|hs|java|jl|js|jsx|less|lua|mjs|php|pm|pod|proto|ps1|psd1|psm1|py|py3|pyw|qml|rb|rpy|sass|sbt|scala|scss|swift|ts|tsx|vue|zsh)\b'

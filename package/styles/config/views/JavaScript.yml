@@ -1,0 +1,26 @@
+# Vale's comment-syntax list carries js and jsx but not mjs or cjs, and a format
+# association can't add them: it targets a markup format, so `mjs = js` leaves Vale with no prose at
+# all. A tree-sitter View can't either, since the View picks the query and Vale picks the grammar by
+# extension. TextFSM needs no grammar, so the same route that covers shell covers these.
+#
+# `^\s*//` requires the line to open with the delimiter, which is what keeps a URL in a string
+# literal out. A `//` that follows code on the same line goes unread; that costs a trailing comment
+# and buys never linting the code beside it.
+engine: textfsm
+template: |
+  Value List Comment (.*)
+
+  Start
+    ^\s*//+\s*${Comment}
+    ^\s*/\*+\s*${Comment} -> Block
+
+  Block
+    ^\s*\*/ -> Start
+    ^\s*\*+/\s* -> Start
+    ^\s*\*+\s*${Comment}
+    ^\s*${Comment}
+scopes:
+  # Without a type the comment reads as plain lines, and no sentence or paragraph rule applies to it.
+  - name: comment
+    expr: Comment
+    type: md

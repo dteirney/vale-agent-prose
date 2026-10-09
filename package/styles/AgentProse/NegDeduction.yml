@@ -1,0 +1,10 @@
+# AiTells.EpigramContrast needs a literal `, not ` after a copula, so it misses the form
+# with its negation in two `no` phrases joined by a deduction.
+extends: existence
+message: "Negated deduction '%s': say what the thing does, then the action it licenses."
+level: suggestion
+ignorecase: true
+raw:
+  - '\bno\s+[\w’''-]+'
+  - '[^.?!]{0,60}?,\s+so\s+'
+  - '[^.?!]{0,40}?\bno\s+[\w’''-]+'

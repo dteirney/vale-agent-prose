@@ -1,0 +1,51 @@
+# The Commits package's View, with what isn't prose left out: a subject's type prefix and ticket
+# key, and the trailers. A Vale configuration can't drop either from that View, because
+# IgnoredScopes skips no View scope and TokenIgnores skips nothing in an untyped one.
+#
+# Any paragraph that opens with a `Token: value` line reads as trailers and isn't linted. A body
+# paragraph that opens with `Note: the cache` is one.
+engine: textfsm
+template: |
+  Value Subject (.+)
+  Value Gap (.*)
+  Value List Body (.*)
+  Value List Trailer (.+)
+
+  Start
+    ^#\s*-+\s*>8\s*-+\s*$$ -> End
+    ^# -> Next
+    ^\s*$$ -> Next
+    ^(?:[a-z]+(?:\([^)]+\))?!?: )?(?:\[[A-Za-z][A-Za-z0-9]*-[0-9]+\] )?${Subject} -> Gap
+
+  Gap
+    ^#\s*-+\s*>8\s*-+\s*$$ -> End
+    ^# -> Next
+    ^${Gap} -> Continue
+    ^\s*$$ -> Para
+    ^(?=(?:(?i:breaking[ -]change)|[\w-]+)(?:: | #))${Trailer} -> Trailers
+    ^${Body} -> Body
+
+  Body
+    ^#\s*-+\s*>8\s*-+\s*$$ -> End
+    ^# -> Next
+    ^(?=\s*$$)${Body} -> Para
+    ^${Body}
+
+  Para
+    ^#\s*-+\s*>8\s*-+\s*$$ -> End
+    ^# -> Next
+    ^(?=\s*$$)${Body} -> Para
+    ^(?=(?:(?i:breaking[ -]change)|[\w-]+)(?:: | #))${Trailer} -> Trailers
+    ^${Body} -> Body
+
+  Trailers
+    ^#\s*-+\s*>8\s*-+\s*$$ -> End
+    ^# -> Next
+    ^\s*$$ -> Para
+    ^${Trailer}
+scopes:
+  - name: subject
+    expr: Subject
+  - name: body
+    expr: Body
+    type: md

@@ -1,0 +1,41 @@
+{{- /*
+  For `vale --output=rdjsonl.tmpl ... | reviewdog -f=rdjsonl`, which carries the severity and the
+  rule's doc link that an errorformat parse drops. The name needs its extension, because Vale looks
+  up the file rather than the rule.
+
+  The commands here don't use it. reviewdog's local reporter prints rdjsonl back unchanged, so it
+  pays off at a reporter that posts to a pull request.
+*/ -}}
+
+{{- /* Range over the linted files */ -}}
+
+{{- range .Files}}
+
+{{- $path := .Path -}}
+
+{{- /* Range over the file's alerts */ -}}
+
+{{- range .Alerts -}}
+
+{{- $error := "" -}}
+{{- if eq .Severity "error" -}}
+    {{- $error = "ERROR" -}}
+{{- else if eq .Severity "warning" -}}
+    {{- $error = "WARNING" -}}
+{{- else -}}
+    {{- $error = "INFO" -}}
+{{- end}}
+
+{{- /* Variables setup */ -}}
+
+{{- $line := printf "%d" .Line -}}
+{{- $start := index .Span 0 -}}
+{{- $end := add (index .Span 1) 1 -}}
+{{- $check := printf "%s" .Check -}}
+{{- $message := printf "%s" .Message -}}
+
+{{- /* Output */ -}}
+
+{"message": "{{ $message | jsonEscape }}", "location": {"path": "{{ $path }}", "range": {"start": {"line": {{ $line }}, "column": {{ $start }}}, "end": {"line": {{ $line }}, "column": {{ $end }}}}}, "severity": "{{ $error }}", "code": {"value": "{{ $check | jsonEscape }}"{{ if .Link }}, "url": "{{ .Link | jsonEscape }}"{{ end }}}}
+{{end -}}
+{{end -}}
