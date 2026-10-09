@@ -82,7 +82,7 @@ It needs Vale 3.23.0 or later. An older Vale reports some alerts on the wrong li
 
 ### Set a Vocab if acronyms flag
 
-A vocabulary entry reaches every style's `exceptions` list, not only spelling. Adding `GDAL` to `styles/config/vocabularies/Base/accept.txt` silences `Google.Acronyms` and `Std.Abbreviations.Acronyms` on it, which is the one job this file still has. Spelling belongs to cspell, which knows the technical words a hand-written list would carry.
+Vale adds a vocabulary entry to every style's `exceptions` list, not only to spelling. Adding `GDAL` to `styles/config/vocabularies/Base/accept.txt` silences `Std.Abbreviations.Acronyms` on it, which is the one job this file still has. Spelling belongs to cspell, which knows the technical words a hand-written list would carry.
 
 An entry is safe as a lowercase word only because `Vale.Terms` is off here. `HEAD`, `PUT` and `PATCH` each carry that collision.
 
@@ -92,17 +92,16 @@ Rules the published packages miss:
 
 | Rule | Catches |
 | --- | --- |
-| `AbstractTriad` | Three abstract nouns in a row, joined by `and` or `or` |
 | `InanimateVerb` | A subject that can't act taking an active verb |
 | `NegDeduction` | A negation in two `no` phrases joined by `so` |
 | `SourcePath` | A source file named in a comment, which a rename breaks |
 | `FleschReadingEase` | A reading-ease score, gated so short text doesn't report |
 
-It also replaces three upstream rules with copies: `Std.Punctuation.OxfordComma`, `Harper.DiscourseMarkers` and `proselint.But`. Vale matches `^` and `$` at every line, so each original fires where a hard wrap starts or ends a line. Each copy anchors to the whole sentence or paragraph instead.
+It also replaces four upstream rules with copies. `AbstractTriad` copies `AiTells.AbstractTriad`, and widens it to catch three abstract nouns joined by `or`. The others copy `Std.Punctuation.OxfordComma`, `Harper.DiscourseMarkers` and `proselint.But`. Vale matches `^` and `$` at every line, so each original fires where a hard wrap starts or ends a line. Each copy anchors to the whole sentence or paragraph instead.
 
 ### Comments in a source file
 
-Vale reads comments through a tree-sitter grammar and has none for shell. The package ships two TextFSM views instead, which need no grammar: `Shell` for anything commenting with `#`, and `JavaScript` for anything commenting with `//`. Between them the config covers the common source extensions, plus the commands with no extension in `bin/`, `tools/` and `githooks/`.
+Vale reads the comments in most source files through its own tree-sitter grammars. Where it has none, the package ships a View. `Shell` reads anything commenting with `#`, including the commands with no extension in `bin/`, `tools/` and `githooks/`. `JavaScript` reads anything commenting with `//`, such as `.mjs` and `.json5`. A third View, `DataComments`, reads only the comments in YAML and TOML, where Vale would otherwise lint the string values too.
 
 ### A commit message
 
