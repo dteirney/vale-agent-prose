@@ -1,0 +1,71 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "version": "0.2",
+  "language": "en",
+  "useGitignore": true,
+  "words": [
+    "adoc",
+    "asciidoctor",
+    "cljc",
+    "cljd",
+    "clig",
+    "commitlint",
+    "commitlintrc",
+    "Cowork",
+    "dteirney",
+    "EDITMSG",
+    "errorformat",
+    "Flesch",
+    "GDAL",
+    "ignorecase",
+    "Kato",
+    "Kincaid",
+    "Liau",
+    "mfinelli",
+    "noprefix",
+    "nullary",
+    "Rakefile",
+    "rdjsonl",
+    "reviewdog",
+    "SCRIPTDIR",
+    "textfsm",
+    "shellcheck",
+    "shfmt",
+    "stripspace",
+    "Sunkam",
+    "Teirney",
+    "tfvars",
+    "tmpl",
+    "toplevel",
+    "Tricolon",
+    "ungated",
+    "unmatch",
+    "wayfinder"
+  ],
+
+  // Only a --dot run reaches in here, and then it reads the whole object store.
+  "ignorePaths": [".git/**"],
+
+  "overrides": [
+    // A command and a git hook have no extension, so they get no language, the
+    // shell dictionary never loads, and every builtin reads as a misspelling.
+    {
+      "filename": "{githooks,tools}/*",
+      "languageId": "shellscript"
+    },
+
+    // cspell maps no language to .bats, and a bats test is bash.
+    {
+      "filename": "**/*.bats",
+      "languageId": "shellscript"
+    },
+
+    // A Vale rule single-quotes its regexes and double-quotes its messages, so
+    // this skips the patterns and still reads the prose. The match stops at a
+    // newline, or an apostrophe in a comment pairs with the next line's quote.
+    {
+      "filename": "package/styles/**/*.yml",
+      "ignoreRegExpList": ["/'[^'\\n]*'/g"]
+    }
+  ]
+}

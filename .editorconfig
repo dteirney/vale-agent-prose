@@ -1,0 +1,25 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# The directory patterns are here because the scripts in them have no
+# extension. Someone types a command and git looks a hook up by name, so an
+# `.sh` on the end would break one and read as noise on the other, and shfmt
+# keys on the glob rather than on the shebang.
+#
+# The first pattern needs its `**/`. A brace group holding any `/` is matched
+# against the whole relative path, so a bare `*.sh` beside the others would
+# reach only the top level.
+[{**/*.sh,githooks/*,tools/*}]
+indent_style = space
+indent_size = 2
+switch_case_indent = true
+binary_next_line = true
+
+[*.{json,yml,yaml,md}]
+indent_style = space
+indent_size = 2

@@ -1,0 +1,14 @@
+# Every tool the gate runs, at the version CI runs it. A new Vale or package
+# release can add a rule or change what one reports, so nothing here floats.
+[tools]
+vale = "3.24.0"
+shellcheck = "0.11.0"
+shfmt = "3.14.0"
+jq = "1.8.2"
+bats = "1.14.0"
+claude = "2.1.293"
+# cspell and commitlint install through npm, so they need node.
+node = "24.21.0"
+"npm:cspell" = "10.3.3"
+"npm:@commitlint/cli" = "21.2.3"
+"npm:@commitlint/config-conventional" = "21.2.3"

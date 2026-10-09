@@ -1,0 +1,30 @@
+# How the shell here is written: the Google Shell Style Guide.
+# https://google.github.io/styleguide/shellguide.html
+#
+# Optional checks are off by default, so every guide rule that has one has to
+# be named here.
+
+# A `source=` path is resolved against the working directory, so without this
+# a sourced sibling only resolves when shellcheck runs from the right place.
+# SCRIPTDIR is shellcheck's name for the directory of the script being
+# checked, which makes the path in the directive independent of the caller.
+source-path=SCRIPTDIR/..
+
+# "Prefer "${var}" over "$var"."
+enable=require-variable-braces
+
+# "[[ … ]] is preferred over [ … ], test and /usr/bin/[."
+enable=require-double-brackets
+
+# "Always quote strings containing variables, command substitutions, spaces or
+# shell meta characters."
+enable=quote-safe-variables
+
+# "Always check return values and give informative return values."
+enable=check-extra-masked-returns
+enable=check-set-e-suppressed
+
+# Deliberately not enabled, none being asked for by the guide: add-default-case
+# (a case that handles only some values reads worse for a no-op default),
+# avoid-negated-conditions, avoid-nullary-conditions, deprecate-which and
+# check-unassigned-uppercase.

@@ -1,0 +1,5 @@
+# `vale sync` writes here when this repo is used as its own consumer.
+/styles/
+
+# The local issue tracker. Its issues and specs stay on the machine that wrote them.
+/.scratch/
