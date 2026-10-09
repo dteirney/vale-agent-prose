@@ -3,6 +3,8 @@
 # The plugin's hooks, run the way Claude Code runs them: JSON on stdin for the
 # prose hook, nothing for the doctor.
 
+bats_require_minimum_version 1.5.0
+
 setup_file() {
   REPO="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
   export REPO
@@ -58,6 +60,20 @@ doctor() {
 lint_file() {
   printf '{"tool_input":{"file_path":"%s"}}' "$1" | lint_hook
 }
+
+# An edit of file $2 in session $1, with a data directory to keep alerts in.
+edit_in() {
+  CLAUDE_PLUGIN_DATA="${CLAUDE_PLUGIN_DATA:-${WORK}/data}" lint_hook \
+    <<<"$(printf '{"session_id":"%s","tool_input":{"file_path":"%s"}}' "$1" "$2")"
+}
+
+# The rechecks of rule $1 in the last run's stderr, one per line.
+rechecks() {
+  jq -r --arg rule "$1" 'select(.rule == $rule) | .recheck' <<<"${stderr}"
+}
+
+readonly TRIAD_REWORDED='Our gate needs clarity, discipline, and rigor before a reviewer trusts it.'
+readonly TRIAD_FIXED='The gate needs one passing test before anyone trusts it.'
 
 @test "a file outside a repository reports every alert" {
   printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
@@ -271,4 +287,139 @@ readonly LONG='before it parses the rest of the body and every section after it 
   run doctor
   [ "${status}" -eq 0 ]
   [[ "$(jq -r .systemMessage <<<"${output}")" == *'has no styles yet'* ]]
+}
+
+@test "an alert left standing reports persisted at the next edit" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf '\n%s\n' "${NEG}" >>"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "${status}" -eq 0 ]
+  [ "$(rechecks AgentProse.AbstractTriad)" = persisted ]
+  [ "$(jq -r 'select(.rule == "AgentProse.AbstractTriad") | .config' <<<"${stderr}")" = own ]
+}
+
+@test "a rewrite of the flagged words reports absent" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf '%s\n' "${TRIAD_FIXED}" >"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "${status}" -eq 0 ]
+  [ "$(rechecks AgentProse.AbstractTriad)" = absent ]
+}
+
+@test "a rewrite elsewhere on the line reports persisted" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf '%s\n' "${TRIAD_REWORDED}" >"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "$(rechecks AgentProse.AbstractTriad)" = persisted ]
+}
+
+@test "two alerts on the same flagged words recheck one occurrence each" {
+  printf '%s\n\n%s\n' "${TRIAD}" "${TRIAD_REWORDED}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf '%s\n\n%s\n' "${TRIAD_FIXED}" "${TRIAD_REWORDED}" >"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "$(rechecks AgentProse.AbstractTriad | sort | paste -sd , -)" = absent,persisted ]
+}
+
+# The hook hands back only what the edit touched, and the recheck reads the
+# whole file.
+@test "an alert on a line the next edit didn't touch reports persisted" {
+  git -C "${WORK}" init -q
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  git -C "${WORK}" add notes.md
+  printf '\n%s\n' "${NEG}" >>"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [[ "${output}" != *'AgentProse.AbstractTriad'* ]]
+  [ "$(rechecks AgentProse.AbstractTriad)" = persisted ]
+}
+
+@test "an alert handed back from a tracked file gets a recheck" {
+  git -C "${WORK}" init -q
+  printf 'Intro.\n' >"${WORK}/notes.md"
+  git -C "${WORK}" add notes.md
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf 'Intro.\n\n%s\n' "${TRIAD_FIXED}" >"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "$(rechecks AgentProse.AbstractTriad)" = absent ]
+}
+
+@test "an alert handed back again gets its own recheck" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf '%s\n' "${TRIAD_REWORDED}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null 2>&1
+  printf '%s\n' "${TRIAD_FIXED}" >"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "$(rechecks AgentProse.AbstractTriad)" = absent ]
+}
+
+@test "an alert with no later edit writes nothing" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *'AgentProse.AbstractTriad'* ]]
+  [ -z "${stderr}" ]
+}
+
+@test "a second session's edit rechecks nothing from the first" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  run --separate-stderr edit_in s2 "${WORK}/notes.md"
+  [ "${status}" -eq 0 ]
+  [ -z "${stderr}" ]
+}
+
+@test "a recheck's line has the alert, its file, its lines and where it ran" {
+  git -C "${WORK}" init -q
+  default_config "${CONSUMER}/styles"
+  cd "${WORK}"
+  unset VALE_CONFIG_PATH
+  printf 'Intro.\n%s\nOutro.\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  local line
+  line="$(jq -c 'select(.rule == "AgentProse.AbstractTriad")' <<<"${stderr}")"
+  [ "$(jq -r .match <<<"${line}")" = 'clarity, discipline, and rigor' ]
+  [[ "$(jq -r .message <<<"${line}")" == 'Abstract-noun triad'* ]]
+  [ "$(jq -r .file <<<"${line}")" = "$(pwd -P)/notes.md" ]
+  [ "$(jq -r .type <<<"${line}")" = md ]
+  [ "$(jq -c '[.lines[].line]' <<<"${line}")" = '[1,2,3]' ]
+  [ "$(jq -r '.lines[1].text' <<<"${line}")" = "${TRIAD}" ]
+  [ "$(jq -r .root <<<"${line}")" = "$(pwd -P)" ]
+  [ "$(jq -r .config <<<"${line}")" = default ]
+  [ "$(jq -r .version <<<"${line}")" = "$(jq -r .version "${REPO}/.claude-plugin/plugin.json")" ]
+}
+
+@test "a data directory the hook can't write to leaves it silent" {
+  : >"${WORK}/data"
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *'AgentProse.AbstractTriad'* ]]
+  [ -z "${stderr}" ]
+}
+
+@test "a session id that names another folder keeps nothing" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in ../s1 "${WORK}/notes.md" >/dev/null
+  run --separate-stderr edit_in ../s1 "${WORK}/notes.md"
+  [ "${status}" -eq 0 ]
+  [ -z "${stderr}" ]
+  [ ! -e "${WORK}/data" ]
+}
+
+@test "an edit Vale can't lint rechecks nothing, and nor does the edit after" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf 'StylesPath = missing\n' >"${WORK}/broken.ini"
+  VALE_CONFIG_PATH="${WORK}/broken.ini" edit_in s1 "${WORK}/notes.md" >/dev/null
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [[ "${output}" == *'AgentProse.AbstractTriad'* ]]
+  [ -z "${stderr}" ]
 }

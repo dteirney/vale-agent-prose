@@ -106,13 +106,21 @@ prose::cspell() {
       --file-list stdin 2>/dev/null || true
 }
 
-# Run the linters over one file. $1 is the path Vale gets, $2 the path cspell
-# gets, and $3 a cspell configuration file to add.
-prose::lint_file() {
-  if prose::vale_reads "$1"; then
-    prose::vale "$1"
-  fi
-  prose::cspell "${3:-}" "$2"
+# Print jq definitions for Vale's JSON report. `alerts` yields each alert with
+# its Path, and `line` prints one in Vale's line format. An error report has no
+# array of alerts, so `alerts` yields nothing for it.
+prose::vale_jq() {
+  # shellcheck disable=SC2016  # jq's own variables
+  printf '%s' 'def alerts: to_entries[] | select(.value | type == "array")
+    | .key as $path | .value[] | . + {Path: $path};
+  def line: "\(.Path):\(.Line):\(.Span[0]):\(.Check):\(.Message)";'
+}
+
+# Print Vale's JSON report, read from stdin, in Vale's line format.
+prose::vale_lines() {
+  local defs
+  defs="$(prose::vale_jq)" || return 1
+  jq -r "${defs} alerts | line"
 }
 
 # Run the linters over many files, one process each. Each Vale start reloads
@@ -257,27 +265,32 @@ prose::filter_touched() {
   ' <<<"${alerts}"
 }
 
-# Print a PostToolUse hook's JSON that hands the alerts back as context. $1
-# is the alerts, $2 the message that goes above them, and $3 the hook's name.
+# Print the alerts in $1 that a hook hands back, with a count of the rest.
 # shellcheck disable=SC2312  # every caller sets pipefail
-prose::hook_context() {
+prose::hook_alerts() {
   # Past forty nobody reads the list, and the ones at the top are the ones to
   # act on.
   local max=40
-  local alerts="$1"
   local total
-  total="$(printf '%s\n' "${alerts}" | wc -l | tr -d ' ')"
-  if [[ "${total}" -gt "${max}" ]]; then
-    alerts="$(printf '%s\n' "${alerts}" | head -n "${max}")
-[$((total - max)) more alerts, not shown.]"
+  total="$(printf '%s\n' "$1" | wc -l | tr -d ' ')"
+  if [[ "${total}" -le "${max}" ]]; then
+    printf '%s\n' "$1"
+    return 0
   fi
+  printf '%s\n' "$1" | head -n "${max}"
+  printf '[%d more alerts, not shown.]\n' "$((total - max))"
+}
 
+# Print a PostToolUse hook's JSON that hands the alerts back as context. $1
+# is the alerts from prose::hook_alerts, $2 the message that goes above them,
+# and $3 the hook's name.
+prose::hook_context() {
   local msg=''
   msg="$(prose::message "$2")" || msg=''
 
   jq -n --arg context "${msg}
 
-${alerts}
+$1
 
 (Enforced by hook $3 -- do not write a memory about it.)" \
     '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:$context}}'
