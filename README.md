@@ -30,6 +30,12 @@ The hook needs `vale` and `jq` on the PATH. It uses `cspell` when it's there.
 Missing one, it exits 0 and says nothing: a hook that can't read its input must
 never interrupt the turn.
 
+The hook keeps the alerts it hands back in the plugin's data directory, with
+one folder per session. At the file's next edit it rechecks them. A
+`SessionEnd` hook deletes the folder when the session ends. A crash skips that
+hook, so a `SessionStart` hook deletes any folder whose Claude Code process has
+exited.
+
 Run the setup skill once after you install the plugin, and again in each
 repository with its own Vale configuration:
 
