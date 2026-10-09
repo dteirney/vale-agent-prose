@@ -4,22 +4,26 @@ on:
   push:
     branches: [main]
 
-# release-please opens and updates the release pull request, and creates the
-# tag and the release when that pull request merges.
+# Every write goes through the App's token. Events from the workflow's own
+# token start no workflow, and the release PR needs its checks to run.
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+  contents: read
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
+        with:
+          token: ${{ steps.app-token.outputs.token }}
 
-      # The build and the upload run here, because a tag that release-please
-      # creates with the workflow's own token starts no other workflow.
       - if: ${{ steps.release.outputs.release_created }}
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - if: ${{ steps.release.outputs.release_created }}
@@ -49,6 +53,6 @@ jobs:
       - name: Upload the package
         if: ${{ steps.release.outputs.release_created }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TAG: ${{ steps.release.outputs.tag_name }}
         run: gh release upload "${TAG}" AgentProse.zip
