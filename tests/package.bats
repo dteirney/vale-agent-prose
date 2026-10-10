@@ -68,6 +68,12 @@ lint() {
   [[ "${output}" != *'AiTells.AbstractTriad'* ]]
 }
 
+@test "a spaced em dash reports only the rewrite" {
+  run lint 'The gate — the final check — passed.'
+  [[ "${output}" == *'AiTells.Dash'* ]]
+  [[ "${output}" != *'Google.EmDash'* ]]
+}
+
 @test "an inanimate subject taking an active verb is caught" {
   run lint 'Metadata carried by each column decides the sort order.'
   [[ "${output}" == *'AgentProse.InanimateVerb'* ]]
