@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 #
 # tools/lint-prose and tools/lint-branch-prose. The branch command's lint needs
-# a commit to diff against, so only its argument handling is here.
+# a commit to diff against, so a test that lints with it commits a base first.
 
 setup_file() {
   REPO="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
@@ -65,6 +65,14 @@ lint_branch() {
   [[ "${output}" == *'Alerts by rule:'* ]]
 }
 
+@test "lint-prose reads a zero-padded limit in decimal" {
+  printf '%s\n\n%s\n' "${TRIAD}" "${TRIAD}" >"${WORK}/a.md"
+  run lint_prose --limit 08 "${WORK}/a.md"
+  [ "${status}" -eq 1 ]
+  [[ "${output}" != *'value too great'* ]]
+  [[ "${output}" != *'Alerts by rule:'* ]]
+}
+
 @test "lint-prose with no operand is a usage error" {
   run lint_prose
   [ "${status}" -eq 64 ]
@@ -92,6 +100,19 @@ lint_branch() {
   cd "${WORK}"
   run lint_branch --base no-such-ref
   [ "${status}" -eq 64 ]
+}
+
+@test "lint-branch-prose reads a zero-padded limit in decimal" {
+  git -C "${WORK}" init -q
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  git -C "${WORK}" add a.md
+  git -C "${WORK}" -c user.name=t -c user.email=t@t commit -qm base
+  printf '\n%s\n\n%s\n' "${TRIAD}" "${TRIAD}" >>"${WORK}/a.md"
+  cd "${WORK}"
+  run lint_branch --base HEAD --limit 08
+  [ "${status}" -eq 1 ]
+  [[ "${output}" != *'value too great'* ]]
+  [[ "${output}" != *'Alerts by rule:'* ]]
 }
 
 @test "lint-branch-prose with an operand is a usage error" {

@@ -336,7 +336,8 @@ $1
 # print a count per rule instead of the rest.
 # shellcheck disable=SC2312  # every caller sets pipefail
 prose::report() {
-  local limit="$1"
+  # Bash arithmetic reads a leading zero as octal, and 08 isn't octal.
+  local limit="$((10#$1))"
   local alerts="$2"
 
   local total
