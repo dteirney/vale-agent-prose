@@ -7,11 +7,14 @@ runs:
   using: composite
   steps:
     # Vale takes the style path from the archive's single top-level folder,
-    # and that folder has to carry the archive's own name.
+    # and that folder has to carry the archive's own name. The license sits
+    # beside the rules that point at it, because sync copies only the styles
+    # and the configuration.
     - name: Build the package
       shell: bash
       run: |
         cp -R package AgentProse
+        cp LICENSE AgentProse/styles/AgentProse/LICENSE
         zip -qr AgentProse.zip AgentProse
 
     # The test suite syncs the directory, with the right content under the
@@ -25,6 +28,7 @@ runs:
         printf 'StylesPath = styles\nPackages = %s\n' \
           "${GITHUB_WORKSPACE}/AgentProse.zip" >consumer/.vale.ini
         vale --config=consumer/.vale.ini sync
+        test -f consumer/styles/AgentProse/LICENSE
         printf 'The gate needs clarity, discipline, or rigor.\n' \
           >consumer/smoke.md
         vale --no-global --config=consumer/.vale.ini --output=line \
