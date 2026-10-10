@@ -120,6 +120,12 @@ lint_commit() {
   [ -z "${output}" ]
 }
 
+@test "a blocked message names the plugin and what to do after the alerts" {
+  printf 'feat: add clarity, discipline, and rigor\n' >"${MSG}"
+  run lint_commit "${MSG}"
+  [[ "${output}" == *'AgentProse.AbstractTriad'*'vale-agent-prose blocked this commit'* ]]
+}
+
 @test "a message with an alert exits 1" {
   printf 'feat: add clarity, discipline, and rigor\n' >"${MSG}"
   run lint_commit "${MSG}"

@@ -49,6 +49,7 @@ commit() {
   run commit "${TRIAD}"
   [ "${status}" -eq 1 ]
   [[ "${output}" == *'COMMIT_EDITMSG:1:'*'AgentProse.AbstractTriad'* ]]
+  [[ "${output}" == *'vale-agent-prose blocked this commit'* ]]
   run git -C "${WORK}/repo" rev-parse -q --verify HEAD
   [ "${status}" -ne 0 ]
 }

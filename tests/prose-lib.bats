@@ -68,6 +68,14 @@ gate_extensions() {
   }
 }
 
+@test "the hook past its cap says when the rest appear" {
+  local alerts
+  alerts="$(seq 1 41 | sed 's/.*/a.md:&:1:Std.Rule:message/')"
+  run prose::hook_alerts "${alerts}"
+  [ "$(grep -c 'Std.Rule' <<<"${output}")" -eq 40 ]
+  [[ "${output}" == *'1 more alerts'*'next edit to this file lists its alerts again'* ]]
+}
+
 @test "the report past its limit prints a count per rule" {
   local alerts
   alerts="$(printf 'a.md:%d:1:Std.Rule:message\n' 1 2 3)"

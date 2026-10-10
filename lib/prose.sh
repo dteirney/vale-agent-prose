@@ -284,7 +284,7 @@ prose::hook_alerts() {
     return 0
   fi
   printf '%s\n' "$1" | head -n "${max}"
-  printf '[%d more alerts, not shown.]\n' "$((total - max))"
+  prose::message lint-prose/more-alerts "$((total - max))"
 }
 
 # Print the parent folder of every session's folder.
@@ -318,17 +318,14 @@ prose::session_dir_claimed() {
 }
 
 # Print a PostToolUse hook's JSON that hands the alerts back as context. $1
-# is the alerts from prose::hook_alerts, $2 the message that goes above them,
-# and $3 the hook's name.
+# is the alerts from prose::hook_alerts, and $2 the message that goes above them.
 prose::hook_context() {
   local msg=''
   msg="$(prose::message "$2")" || msg=''
 
   jq -n --arg context "${msg}
 
-$1
-
-(Enforced by hook $3 -- do not write a memory about it.)" \
+$1" \
     '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:$context}}'
 }
 

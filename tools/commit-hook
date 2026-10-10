@@ -64,10 +64,12 @@ die() {
   exit "$1"
 }
 
-# Copy the check and the libraries it sources, keeping their relative layout.
+# Copy the check, the libraries it sources and the message it prints, keeping
+# their relative layout.
 copy_check() {
   local dir="$1" rel
-  for rel in tools/lint-commit-prose lib/prose.sh lib/sysexits.sh; do
+  for rel in tools/lint-commit-prose lib/prose.sh lib/sysexits.sh \
+    messages/lint-commit-prose/blocked.txt; do
     if cmp -s "${SCRIPT_DIR}/../${rel}" "${dir}/${rel}"; then
       continue
     fi

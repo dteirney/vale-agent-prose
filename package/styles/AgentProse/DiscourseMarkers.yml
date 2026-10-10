@@ -27,7 +27,8 @@
 # newline ending a paragraph, so a marker standing alone with no clause after
 # it -- a heading, a list item -- was asked for a comma it has nowhere to put.
 # The shape is `internal/rx`.Gap followed by a lookahead, spelled out because a
-# hand-written rule cannot import it.
+# hand-written rule cannot import it. The gap sits inside a lookahead too, so the
+# alert's message quotes the marker without the space after it.
 #
 # Harper is Copyright (c) Automattic, Inc. and contributors,
 # licensed under the Apache License 2.0.
@@ -41,11 +42,11 @@
 # `of course` is not among them. Harper leaves "Of course feel free to add
 # this by pull request" alone, and including it flagged three.
 extends: existence
-message: "A discourse marker needs a comma after it."
+message: "Put a comma after '%s', or cut it."
 level: suggestion
 scope: sentence
 ignorecase: true
 nonword: true
 tokens:
-  - '\A(?:accordingly|additionally|alternatively|consequently|conversely|frankly|furthermore|hence|honestly|however|incidentally|indeed|instead|meanwhile|moreover|nevertheless|notwithstanding|nowadays|otherwise|subsequently|therefore|thus)[^\S\n]*\s[^\S\n]*(?!(?:of|in|on|at|to|for|from|with|by|about|into|onto|over|under|above|below|after|before|between|among|across|around|behind|beyond|through|during|despite|without|within|against|toward|towards|upon|per|via|like|than|and|or|but|nor|yet|so|far|also|only|just|even|still|again|already)\b)(?=\S)'
-  - '\A(?:now(?:[^\S\n]*\s[^\S\n]*)a(?:[^\S\n]*\s[^\S\n]*)days|on(?:[^\S\n]*\s[^\S\n]*)the(?:[^\S\n]*\s[^\S\n]*)other(?:[^\S\n]*\s[^\S\n]*)hand|on(?:[^\S\n]*\s[^\S\n]*)the(?:[^\S\n]*\s[^\S\n]*)contrary|for(?:[^\S\n]*\s[^\S\n]*)example|for(?:[^\S\n]*\s[^\S\n]*)instance|in(?:[^\S\n]*\s[^\S\n]*)other(?:[^\S\n]*\s[^\S\n]*)words|in(?:[^\S\n]*\s[^\S\n]*)fact|in(?:[^\S\n]*\s[^\S\n]*)addition|in(?:[^\S\n]*\s[^\S\n]*)conclusion|in(?:[^\S\n]*\s[^\S\n]*)short|in(?:[^\S\n]*\s[^\S\n]*)particular|as(?:[^\S\n]*\s[^\S\n]*)a(?:[^\S\n]*\s[^\S\n]*)result|after(?:[^\S\n]*\s[^\S\n]*)all|at(?:[^\S\n]*\s[^\S\n]*)the(?:[^\S\n]*\s[^\S\n]*)same(?:[^\S\n]*\s[^\S\n]*)time|to(?:[^\S\n]*\s[^\S\n]*)be(?:[^\S\n]*\s[^\S\n]*)honest|to(?:[^\S\n]*\s[^\S\n]*)be(?:[^\S\n]*\s[^\S\n]*)fair)[^\S\n]*\s[^\S\n]*(?=\S)'
+  - '\A(?:accordingly|additionally|alternatively|consequently|conversely|frankly|furthermore|hence|honestly|however|incidentally|indeed|instead|meanwhile|moreover|nevertheless|notwithstanding|nowadays|otherwise|subsequently|therefore|thus)(?=[^\S\n]*\s[^\S\n]*(?!(?:of|in|on|at|to|for|from|with|by|about|into|onto|over|under|above|below|after|before|between|among|across|around|behind|beyond|through|during|despite|without|within|against|toward|towards|upon|per|via|like|than|and|or|but|nor|yet|so|far|also|only|just|even|still|again|already)\b)\S)'
+  - '\A(?:now(?:[^\S\n]*\s[^\S\n]*)a(?:[^\S\n]*\s[^\S\n]*)days|on(?:[^\S\n]*\s[^\S\n]*)the(?:[^\S\n]*\s[^\S\n]*)other(?:[^\S\n]*\s[^\S\n]*)hand|on(?:[^\S\n]*\s[^\S\n]*)the(?:[^\S\n]*\s[^\S\n]*)contrary|for(?:[^\S\n]*\s[^\S\n]*)example|for(?:[^\S\n]*\s[^\S\n]*)instance|in(?:[^\S\n]*\s[^\S\n]*)other(?:[^\S\n]*\s[^\S\n]*)words|in(?:[^\S\n]*\s[^\S\n]*)fact|in(?:[^\S\n]*\s[^\S\n]*)addition|in(?:[^\S\n]*\s[^\S\n]*)conclusion|in(?:[^\S\n]*\s[^\S\n]*)short|in(?:[^\S\n]*\s[^\S\n]*)particular|as(?:[^\S\n]*\s[^\S\n]*)a(?:[^\S\n]*\s[^\S\n]*)result|after(?:[^\S\n]*\s[^\S\n]*)all|at(?:[^\S\n]*\s[^\S\n]*)the(?:[^\S\n]*\s[^\S\n]*)same(?:[^\S\n]*\s[^\S\n]*)time|to(?:[^\S\n]*\s[^\S\n]*)be(?:[^\S\n]*\s[^\S\n]*)honest|to(?:[^\S\n]*\s[^\S\n]*)be(?:[^\S\n]*\s[^\S\n]*)fair)(?=[^\S\n]*\s[^\S\n]*\S)'

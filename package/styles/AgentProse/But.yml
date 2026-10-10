@@ -4,7 +4,7 @@
 # Derived from proselint, Copyright (c) 2014-2015 Jordan Suchow, Michael Pacer and Lara A. Ross,
 # BSD-3-Clause. See LICENSE.
 extends: existence
-message: "Do not start a paragraph with a 'but'."
+message: "'But' opens the paragraph: join the paragraph to the one before, or drop the 'But'."
 level: error
 scope: paragraph
 action:

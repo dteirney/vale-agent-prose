@@ -230,8 +230,7 @@ main() {
 
   [[ -n "${handed_back}" ]] || exit 0
 
-  prose::hook_context "${handed_back}" lint-prose/context \
-    "$(basename "${BASH_SOURCE[0]}" .sh)"
+  prose::hook_context "${handed_back}" lint-prose/context
   exit 0
 }
 

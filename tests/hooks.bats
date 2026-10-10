@@ -100,6 +100,14 @@ readonly TRIAD_FIXED='The gate needs one passing test before anyone trusts it.'
     == *'AgentProse.AbstractTriad'* ]]
 }
 
+@test "the hook claims no enforcement, because it can't block" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  run lint_file "${WORK}/notes.md"
+  [[ "$(jq -r .hookSpecificOutput.additionalContext <<<"${output}")" \
+    == *'AgentProse.AbstractTriad'* ]]
+  [[ "${output}" != *'Enforced'* ]]
+}
+
 @test "a tracked file leaves out a paragraph the edit didn't touch" {
   git -C "${WORK}" init -q
   printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"

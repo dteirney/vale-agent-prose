@@ -6,7 +6,7 @@
 # The extension list below matches the sections that turn this rule on, so a comment in any file
 # Vale reads is checked against every source extension it could name.
 extends: existence
-message: "Source file '%s' named in a comment: a rename breaks it and no build catches it."
+message: "Source file '%s' named in a comment: describe what it does instead, so a rename can't break the comment."
 level: error
 ignorecase: true
 raw:

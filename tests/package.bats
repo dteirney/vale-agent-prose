@@ -322,6 +322,11 @@ write_probe() {
   [[ "${output}" != *'Harper.DiscourseMarkers'* ]]
 }
 
+@test "a discourse marker's alert quotes the marker alone" {
+  run lint 'On the other hand the hook keeps them per file.'
+  [[ "${output}" == *"AgentProse.DiscourseMarkers:Put a comma after 'On the other hand',"* ]]
+}
+
 @test "a but a wrap puts first on a comment line reports nothing" {
   run lint_source probe.sh '#!/usr/bin/env bash' \
     '# The sweep runs at every start and deletes the folder of each dead session.' \

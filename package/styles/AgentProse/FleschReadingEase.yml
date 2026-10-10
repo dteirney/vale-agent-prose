@@ -2,7 +2,7 @@
 # them this rule grades a commit message and offers a fix nobody can make. Flesch divides by the
 # sentence count, so one 100-word sentence clears the word gate and still means nothing.
 extends: metric
-message: "Try to keep the Flesch reading ease score (%s) above 70."
+message: "Flesch reading ease is %s, under 70."
 link: https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests
 
 formula: |
