@@ -197,7 +197,8 @@ main() {
   command -v jq >/dev/null || die "${EX_UNAVAILABLE}" 'jq is required'
 
   local version
-  version="$(jq -r .version "${SCRIPT_DIR}/../.claude-plugin/plugin.json")" \
+  # shellcheck disable=SC2310  # its failure exits here
+  version="$(prose::plugin_version)" \
     || die "${EX_SOFTWARE}" 'cannot read the plugin version'
 
   local projects="${CLAUDE_CONFIG_DIR:-${HOME}/.claude}/projects"

@@ -62,6 +62,12 @@ prose::vale() {
     | xargs -0 vale --no-global --output=line 2>/dev/null || true
 }
 
+# Print the version the plugin's manifest declares. The prose hook writes it into
+# each recheck and review-alerts counts only that version's, so both read it here.
+prose::plugin_version() {
+  jq -r .version "$(dirname "${BASH_SOURCE[0]}")/../.claude-plugin/plugin.json"
+}
+
 # Print the message in messages/$1.txt, with the rest of the arguments filling
 # its %s placeholders in order.
 prose::message() {

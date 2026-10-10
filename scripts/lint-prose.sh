@@ -75,8 +75,8 @@ save_alerts() {
     type="${name##*.}"
   fi
   local version defs
-  version="$(jq -r .version "${SCRIPT_DIR}/../.claude-plugin/plugin.json")" \
-    || return 1
+  # shellcheck disable=SC2310  # the hook exits 0 on any failure
+  version="$(prose::plugin_version)" || return 1
   # shellcheck disable=SC2310  # the hook exits 0 on any failure
   defs="$(prose::vale_jq)" || return 1
 
