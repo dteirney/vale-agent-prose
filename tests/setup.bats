@@ -69,15 +69,15 @@ failing_sync() {
   printf '[unclosed\n' >"${WORK}/project/.vale.ini"
   cd "${WORK}/project"
   run setup_cmd install "${DATA}"
-  [ "${status}" -eq 1 ]
+  [ "${status}" -eq 70 ]
   [[ "${output}" == *'unclosed section'* ]]
 }
 
-@test "a failed step still runs the rest, and install exits 1" {
+@test "a failed step still runs the rest, and install fails" {
   failing_sync
   cd "${WORK}/project"
   PATH="${WORK}/bin:${PATH}" run setup_cmd install "${DATA}"
-  [ "${status}" -eq 1 ]
+  [ "${status}" -eq 70 ]
   run git config get --global hook.vale-agent-prose.command
   [ "${status}" -eq 0 ]
 }
@@ -94,12 +94,12 @@ failing_sync() {
 
 @test "no subcommand is a usage error" {
   run setup_cmd
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "install with no directory is a usage error" {
   run setup_cmd install
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "--help exits 0" {

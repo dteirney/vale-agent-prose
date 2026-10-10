@@ -15,6 +15,9 @@ readonly PROG="${0##*/}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly ROOT
 
+# shellcheck source=lib/sysexits.sh
+source "${ROOT}/lib/sysexits.sh"
+
 usage() {
   cat <<EOF
 usage: ${PROG} [--fix]
@@ -26,19 +29,22 @@ workflows, the plugin manifest, spelling, and the tests.
   --fix        apply shfmt's and prettier's formatting before reporting
   -h, --help   print this and exit
 
-Exit 0 when every step passes, 1 when any fails, 2 on a usage error.
+Exit 0 when every step passes, 1 when any fails, and a sysexits(3) code when
+the gate itself can't run: 64 on a usage error, 69 when a tool is missing, 70
+when it can't list the files to check.
 EOF
 }
 
 usage_error() {
   printf '%s: %s\n' "${PROG}" "$1" >&2
   usage >&2
-  exit 2
+  exit "${EX_USAGE}"
 }
 
+# Print message $2 and exit with code $1.
 die() {
-  printf '%s: %s\n' "${PROG}" "$1" >&2
-  exit 1
+  printf '%s: %s\n' "${PROG}" "$2" >&2
+  exit "$1"
 }
 
 # Each step appends "name:ok" or "name:failed" here.
@@ -57,16 +63,16 @@ collect() {
   local out line
   out="$(find "${ROOT}/githooks" "${ROOT}/lib" "${ROOT}/scripts" "${ROOT}/tools" \
     -type f \( -name '*.sh' -o ! -name '*.*' \) | sort)" \
-    || die 'cannot list the scripts'
+    || die "${EX_SOFTWARE}" 'cannot list the scripts'
   while IFS= read -r line; do
     if [[ -n "${line}" ]]; then
       SCRIPTS+=("${line}")
     fi
   done <<<"${out}"
-  [[ ${#SCRIPTS[@]} -gt 0 ]] || die 'found no scripts to check'
+  [[ ${#SCRIPTS[@]} -gt 0 ]] || die "${EX_SOFTWARE}" 'found no scripts to check'
 
   out="$(find "${ROOT}" -name '*.json' -not -path '*/.git/*' | sort)" \
-    || die 'cannot list the JSON files'
+    || die "${EX_SOFTWARE}" 'cannot list the JSON files'
   while IFS= read -r line; do
     if [[ -n "${line}" ]]; then
       JSON_FILES+=("${line}")
@@ -194,18 +200,11 @@ main() {
 
   [[ $# -eq 0 ]] || usage_error "expected no operands, got $#"
 
-  command -v shellcheck >/dev/null || die 'shellcheck is required'
-
-  command -v shfmt >/dev/null || die 'shfmt is required'
-  command -v jq >/dev/null || die 'jq is required'
-  command -v actionlint >/dev/null || die 'actionlint is required'
-  command -v vale >/dev/null || die 'vale is required'
-  command -v bats >/dev/null || die 'bats is required'
-  command -v rush >/dev/null || die 'rush is required'
-  command -v cspell >/dev/null || die 'cspell is required'
-  command -v prettier >/dev/null || die 'prettier is required'
-  command -v commitlint >/dev/null || die 'commitlint is required'
-  command -v claude >/dev/null || die 'claude is required'
+  local tool
+  for tool in shellcheck shfmt jq actionlint vale bats rush cspell prettier \
+    commitlint claude; do
+    command -v "${tool}" >/dev/null || die "${EX_UNAVAILABLE}" "${tool} is required"
+  done
 
   collect
 

@@ -116,10 +116,10 @@ lint_commit() {
 
 @test "no operand is a usage error" {
   run lint_commit
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
-@test "a missing file is a usage error" {
+@test "a missing file exits with no input" {
   run lint_commit "${CONSUMER}/nothing-here"
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 66 ]
 }

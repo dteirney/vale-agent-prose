@@ -57,11 +57,11 @@ ranked() {
   grep -oE '^[A-Za-z]+\.[A-Za-z]+' <<<"${output}" | paste -sd , -
 }
 
-@test "no records exits 1 and names the folder it searched" {
+@test "no records exits 0 and names the folder it searched" {
   mkdir "${CLAUDE_CONFIG_DIR}/projects"
   run review
-  [ "${status}" -eq 1 ]
-  [[ "${output}" == *"${CLAUDE_CONFIG_DIR}/projects"* ]]
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *"${CLAUDE_CONFIG_DIR}/projects hold no rechecks"* ]]
 }
 
 @test "rules rank by persistence rate, and a rule needs five rechecks" {
@@ -252,8 +252,8 @@ twelve_rules() {
 @test "a record from an older plugin version doesn't count" {
   rechecks_of Some.Rule persisted 5 0.0.1 | record_in -home-dev-notes/s1.jsonl
   run review
-  [ "${status}" -eq 1 ]
-  [[ "${output}" == *"${CLAUDE_CONFIG_DIR}/projects"* ]]
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *"${CLAUDE_CONFIG_DIR}/projects hold no rechecks"* ]]
 }
 
 @test "the same lines from another hook don't count" {
@@ -263,7 +263,8 @@ twelve_rules() {
     >"${CLAUDE_CONFIG_DIR}/projects/-home-dev-notes/s2.jsonl"
   rm "${CLAUDE_CONFIG_DIR}/projects/-home-dev-notes/s1.jsonl"
   run review
-  [ "${status}" -eq 1 ]
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *'hold no rechecks'* ]]
 }
 
 @test "records with no rule that ranks exit 0 and say so" {
@@ -282,27 +283,27 @@ twelve_rules() {
 
 @test "an operand is a usage error" {
   run review somewhere
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "an unknown option is a usage error" {
   run review --all
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "a non-numeric limit is a usage error" {
   run review --limit many
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "a non-numeric alert limit is a usage error" {
   run review --alert-limit many
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "an alert limit with no count is a usage error" {
   run review --alert-limit
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "--help names the alert limit and its default" {

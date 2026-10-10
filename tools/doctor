@@ -14,6 +14,8 @@ readonly SCRIPT_DIR
 
 # shellcheck source=lib/prose.sh
 source "${SCRIPT_DIR}/../lib/prose.sh"
+# shellcheck source=lib/sysexits.sh
+source "${SCRIPT_DIR}/../lib/sysexits.sh"
 
 # Before this release Vale placed a script rule's match by its offset in the
 # paragraph, not in the file. The prose hook then filtered alerts by the
@@ -39,14 +41,15 @@ reports as a problem.
 
   -h, --help   print this and exit
 
-Exit 0 when nothing is wrong, 1 when it reports a problem, 2 on a usage error.
+Exit 0 when nothing is wrong, 1 when it reports a problem, and 64, sysexits(3)
+EX_USAGE, on a usage error.
 EOF
 }
 
 usage_error() {
   printf '%s: %s\n' "${PROG}" "$1" >&2
   usage >&2
-  exit 2
+  exit "${EX_USAGE}"
 }
 
 # Print the first x.y.z in what a --version flag printed, or nothing.

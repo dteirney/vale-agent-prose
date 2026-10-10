@@ -13,6 +13,8 @@ readonly SCRIPT_DIR
 
 # shellcheck source=lib/prose.sh
 source "${SCRIPT_DIR}/../lib/prose.sh"
+# shellcheck source=lib/sysexits.sh
+source "${SCRIPT_DIR}/../lib/sysexits.sh"
 
 usage() {
   cat <<EOF
@@ -34,19 +36,22 @@ Run it from a commit-msg hook, which git passes the message file:
 
   ${PROG} "\$1"
 
-Exit 0 when clean, 1 when it reports an alert, 2 on a usage error.
+Exit 0 when clean, 1 when it reports an alert, and a sysexits(3) code on
+failure: 64 on a usage error, 66 when the file doesn't exist, 69 when git or
+vale is missing, 70 when the message can't be stripped.
 EOF
 }
 
 usage_error() {
   printf '%s: %s\n' "${PROG}" "$1" >&2
   usage >&2
-  exit 2
+  exit "${EX_USAGE}"
 }
 
+# Print message $2 and exit with code $1.
 die() {
-  printf '%s: %s\n' "${PROG}" "$1" >&2
-  exit 1
+  printf '%s: %s\n' "${PROG}" "$2" >&2
+  exit "$1"
 }
 
 main() {
@@ -67,10 +72,10 @@ main() {
   done
 
   [[ $# -eq 1 ]] || usage_error "expected one file, got $#"
-  [[ -f "$1" ]] || usage_error "no such file '$1'"
+  [[ -f "$1" ]] || die "${EX_NOINPUT}" "no such file '$1'"
 
-  command -v git >/dev/null || die 'git is required'
-  command -v vale >/dev/null || die 'vale is required'
+  command -v git >/dev/null || die "${EX_UNAVAILABLE}" 'git is required'
+  command -v vale >/dev/null || die "${EX_UNAVAILABLE}" 'vale is required'
 
   prose::use_default_config "${SCRIPT_DIR}/../vale/.vale.ini"
 
@@ -79,7 +84,7 @@ main() {
   local alerts
   # shellcheck disable=SC2310  # the failure is handled on the same line
   alerts="$(prose::lint_commit "$1" '')" \
-    || die 'cannot strip the comment block or the trailers'
+    || die "${EX_SOFTWARE}" 'cannot strip the comment block or the trailers'
 
   [[ -n "${alerts}" ]] || return 0
 

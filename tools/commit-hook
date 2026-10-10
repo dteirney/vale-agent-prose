@@ -14,6 +14,8 @@ readonly SCRIPT_DIR
 
 # shellcheck source=lib/prose.sh
 source "${SCRIPT_DIR}/../lib/prose.sh"
+# shellcheck source=lib/sysexits.sh
+source "${SCRIPT_DIR}/../lib/sysexits.sh"
 
 # A friendly name, which git refuses when it matches a hook event's name.
 readonly HOOK='vale-agent-prose'
@@ -44,25 +46,28 @@ still goes through after an uninstall.
 
 Needs git ${MIN_GIT} or later.
 
-Exit 0 on success, 1 when git or a copy fails, 2 on a usage error.
+Exit 0 on success, and a sysexits(3) code on failure: 64 on a usage error, 69
+when git is missing or too old, 73 when the copy fails, 74 when the git config
+write fails.
 EOF
 }
 
 usage_error() {
   printf '%s: %s\n' "${PROG}" "$1" >&2
   usage >&2
-  exit 2
+  exit "${EX_USAGE}"
 }
 
+# Print message $2 and exit with code $1.
 die() {
-  printf '%s: %s\n' "${PROG}" "$1" >&2
-  exit 1
+  printf '%s: %s\n' "${PROG}" "$2" >&2
+  exit "$1"
 }
 
-# Copy the check and the library it sources, keeping their relative layout.
+# Copy the check and the libraries it sources, keeping their relative layout.
 copy_check() {
   local dir="$1" rel
-  for rel in tools/lint-commit-prose lib/prose.sh; do
+  for rel in tools/lint-commit-prose lib/prose.sh lib/sysexits.sh; do
     if cmp -s "${SCRIPT_DIR}/../${rel}" "${dir}/${rel}"; then
       continue
     fi
@@ -87,24 +92,25 @@ install() {
   [[ "${dir}" != *"'"* ]] || usage_error "a quote in '${dir}' would break the hook"
 
   # shellcheck disable=SC2310  # the failure is handled on the same line
-  git_new_enough || die "git ${MIN_GIT} or later is needed to run a hook from config"
+  git_new_enough \
+    || die "${EX_UNAVAILABLE}" "git ${MIN_GIT} or later is needed to run a hook from config"
   # shellcheck disable=SC2310  # the failure is handled on the same line
-  copy_check "${dir}" || die "cannot copy the check into '${dir}'"
+  copy_check "${dir}" || die "${EX_CANTCREAT}" "cannot copy the check into '${dir}'"
 
   # Git appends the message file to the command, so the function takes it.
   local check="${dir}/tools/lint-commit-prose"
   local command="f() { p='${check}'; [ -x \"\$p\" ] || exit 0; exec \"\$p\" \"\$@\"; }; f"
 
   git config set --global --all "hook.${HOOK}.event" commit-msg \
-    || die 'cannot set the hook event in the global git config'
+    || die "${EX_IOERR}" 'cannot set the hook event in the global git config'
   git config set --global "hook.${HOOK}.command" "${command}" \
-    || die 'cannot set the hook command in the global git config'
+    || die "${EX_IOERR}" 'cannot set the hook command in the global git config'
   prose::message commit-hook/installed "${HOOK}" "${check}"
 }
 
 refresh() {
   # shellcheck disable=SC2310  # the failure is handled on the same line
-  copy_check "$1" || die "cannot copy the check into '$1'"
+  copy_check "$1" || die "${EX_CANTCREAT}" "cannot copy the check into '$1'"
 }
 
 remove() {
@@ -113,7 +119,7 @@ remove() {
     return 0
   fi
   git config remove-section --global "hook.${HOOK}" \
-    || die 'cannot remove the hook from the global git config'
+    || die "${EX_IOERR}" 'cannot remove the hook from the global git config'
   prose::message commit-hook/removed "${HOOK}"
 }
 
@@ -134,7 +140,7 @@ main() {
     *) usage_error "unknown subcommand '$1'" ;;
   esac
 
-  command -v git >/dev/null || die 'git is required'
+  command -v git >/dev/null || die "${EX_UNAVAILABLE}" 'git is required'
 
   case "$1" in
     install) install "$2" ;;

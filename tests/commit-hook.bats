@@ -148,24 +148,24 @@ repo_hook() {
     "$(command -v git)" >"${WORK}/bin/git"
   chmod +x "${WORK}/bin/git"
   PATH="${WORK}/bin:${PATH}" run commit_hook install "${DATA}"
-  [ "${status}" -eq 1 ]
+  [ "${status}" -eq 69 ]
   run git config get --global hook.vale-agent-prose.command
   [ "${status}" -ne 0 ]
 }
 
 @test "no subcommand is a usage error" {
   run commit_hook
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "install with no directory is a usage error" {
   run commit_hook install
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "an unknown subcommand is a usage error" {
   run commit_hook enable
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "--help exits 0" {

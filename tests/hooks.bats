@@ -293,7 +293,7 @@ readonly LONG='before it parses the rest of the body and every section after it 
 
 @test "tools/doctor with two operands is a usage error" {
   run "${REPO}/tools/doctor" a b
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "the doctor names a default config that hasn't synced" {

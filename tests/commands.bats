@@ -67,23 +67,23 @@ lint_branch() {
 
 @test "lint-prose with no operand is a usage error" {
   run lint_prose
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
-@test "lint-prose with a missing path is a usage error" {
+@test "lint-prose with a missing path exits with no input" {
   run lint_prose "${WORK}/nothing-here"
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 66 ]
 }
 
 @test "lint-prose with a non-numeric limit is a usage error" {
   run lint_prose --limit many "${WORK}"
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
-@test "lint-branch-prose outside a repository exits 1" {
+@test "lint-branch-prose outside a repository is a usage error" {
   cd "${WORK}"
   run lint_branch
-  [ "${status}" -eq 1 ]
+  [ "${status}" -eq 64 ]
   [[ "${output}" == *'not inside a git repository'* ]]
 }
 
@@ -91,10 +91,10 @@ lint_branch() {
   git -C "${WORK}" init -q
   cd "${WORK}"
   run lint_branch --base no-such-ref
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }
 
 @test "lint-branch-prose with an operand is a usage error" {
   run lint_branch README.md
-  [ "${status}" -eq 2 ]
+  [ "${status}" -eq 64 ]
 }

@@ -14,13 +14,12 @@ A persisted alert says Vale raised it again at the next edit of its file. It doe
 "${CLAUDE_PLUGIN_ROOT}/tools/review-alerts"
 ```
 
-Show the user its output and its exit code. Then branch on the exit code:
+Show the user its output and its exit code. Then branch:
 
+- **Not 0:** the command failed, perhaps after printing some rules. Show the error lines as printed, and stop. Judge none of the rules it printed.
 - **0 with ranked rules:** go to step 2.
+- **0, and the output says the transcripts hold no rechecks:** report that, with the folder the output names, and stop. Tell the user an empty search isn't evidence the rules are fine.
 - **0 with no ranked rule:** the output says how many rechecks it found and the floor a rule needs. Stop there.
-- **1 with a line starting `review-alerts:`:** the command failed, perhaps after printing some rules. Show the error lines as printed, and stop. Judge none of the rules it printed.
-- **1 otherwise:** the transcripts hold no rechecks from this plugin version. Report that, with the folder the output names, and stop. Tell the user an empty search isn't evidence the rules are fine.
-- **Anything else:** show the error lines as printed, and stop.
 
 ## 2. Judge each printed alert
 

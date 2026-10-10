@@ -14,6 +14,8 @@ readonly SCRIPT_DIR
 
 # shellcheck source=lib/prose.sh
 source "${SCRIPT_DIR}/../lib/prose.sh"
+# shellcheck source=lib/sysexits.sh
+source "${SCRIPT_DIR}/../lib/sysexits.sh"
 
 usage() {
   cat <<EOF
@@ -34,14 +36,16 @@ earlier one fails, and the output names each step's result.
 
   -h, --help   print this and exit
 
-Exit 0 when every step succeeds, 1 when any step fails, 2 on a usage error.
+Exit 0 when every step succeeds, and a sysexits(3) code on failure: 64 on a
+usage error, 69 when vale or git is missing, 70 when an install step fails, 74
+when remove can't write the git config.
 EOF
 }
 
 usage_error() {
   printf '%s: %s\n' "${PROG}" "$1" >&2
   usage >&2
-  exit 2
+  exit "${EX_USAGE}"
 }
 
 # Sync the styles the working directory's own Vale configuration lists. A
@@ -81,7 +85,7 @@ install() {
   # shellcheck disable=SC2310  # the failure is handled on the same line
   sync_repository || failed=1
 
-  return "${failed}"
+  [[ "${failed}" -eq 0 ]] || return "${EX_SOFTWARE}"
 }
 
 main() {
@@ -103,7 +107,7 @@ main() {
 
   command -v vale >/dev/null || {
     printf '%s: vale is required\n' "${PROG}" >&2
-    exit 1
+    exit "${EX_UNAVAILABLE}"
   }
 
   case "$1" in

@@ -36,7 +36,7 @@ release-please keeps a release pull request open. Merging it tags the release, a
 [clig.dev](https://clig.dev) decides it. Nothing checks this, so it's on you. What it means for every file in `tools/`:
 
 - `--help` prints a usage line, the options, and what the exit codes mean.
-- Exit `0` on success, `1` when the work ran and found something, `2` when the arguments were wrong.
+- Exit `0` on success. A command that checks something exits `1` when the check found something, as ShellCheck does. A command that reports, such as `review-alerts`, exits `0` whatever is in the report. A failure exits with its `sysexits(3)` code, from `lib/sysexits.sh`: `64` for wrong arguments, and the rest by the man page's definitions.
 - A finding goes to stdout. A diagnostic goes to stderr.
 - A long report has a limit, and says how to ask for the rest.
 - A sentence a person or an agent reads goes in `messages/`, one file per message, and prints through `prose::message`. The gate lints every file there with the package. `--help` text and argument errors stay inline, because they're structured output and not prose.

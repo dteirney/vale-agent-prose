@@ -180,7 +180,7 @@ Vale reads the comments in most source files through its own tree-sitter grammar
 | `tools/commit-hook install <dir>` | Add the global `commit-msg` hook alone |
 | `tools/review-alerts` | Rank the rules whose alerts persist |
 
-Each exits 0 when clean, 1 on a finding, and 2 on a usage error. Run any of them with `--help`. `tools/review-alerts` exits 1 when the transcripts hold no rechecks, and names the folder it searched.
+Each exits 0 when clean, 1 on a finding, and 64 on a usage error. Any other failure exits with its `sysexits(3)` code, and `--help` names each one. `tools/review-alerts` is a report, so it exits 0 whatever it finds, even when the transcripts hold no rechecks.
 
 `tools/lint-commit-prose` adds cspell to the Vale run in the commit message section, and exits 1 on an alert of any level.
 

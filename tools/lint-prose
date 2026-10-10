@@ -14,6 +14,8 @@ readonly SCRIPT_DIR
 
 # shellcheck source=lib/prose.sh
 source "${SCRIPT_DIR}/../lib/prose.sh"
+# shellcheck source=lib/sysexits.sh
+source "${SCRIPT_DIR}/../lib/sysexits.sh"
 
 readonly DEFAULT_LIMIT=40
 
@@ -32,19 +34,22 @@ glob before ${PROG} sees it, so a pattern works as a list of paths.
 Past the limit it prints a count per rule instead of the rest. One rule with
 hundreds of hits is a question about that rule, not about hundreds of lines.
 
-Exit 0 when clean, 1 when it reports an alert, 2 on a usage error.
+Exit 0 when clean, 1 when it reports an alert, and a sysexits(3) code on
+failure: 64 on a usage error, 66 when a path doesn't exist, 69 when vale is
+missing, 74 when a directory can't be walked.
 EOF
 }
 
 usage_error() {
   printf '%s: %s\n' "${PROG}" "$1" >&2
   usage >&2
-  exit 2
+  exit "${EX_USAGE}"
 }
 
+# Print message $2 and exit with code $1.
 die() {
-  printf '%s: %s\n' "${PROG}" "$1" >&2
-  exit 1
+  printf '%s: %s\n' "${PROG}" "$2" >&2
+  exit "$1"
 }
 
 # Expand one operand into the files to lint. A directory is walked; a file
@@ -54,7 +59,7 @@ collect_paths() {
   local operand="$1"
   if [[ -d "${operand}" ]]; then
     find "${operand}" -type f -not -path '*/.git/*' | sort \
-      || die "cannot walk '${operand}'"
+      || die "${EX_IOERR}" "cannot walk '${operand}'"
   else
     printf '%s\n' "${operand}"
   fi
@@ -88,15 +93,15 @@ main() {
   # whole-repository run is slow, and clig.dev warns against the surprise.
   if [[ $# -eq 0 ]]; then
     usage
-    return 2
+    return "${EX_USAGE}"
   fi
 
-  command -v vale >/dev/null || die 'vale is required'
+  command -v vale >/dev/null || die "${EX_UNAVAILABLE}" 'vale is required'
 
   local -a files=()
   local operand out line
   for operand in "$@"; do
-    [[ -e "${operand}" ]] || usage_error "no such path '${operand}'"
+    [[ -e "${operand}" ]] || die "${EX_NOINPUT}" "no such path '${operand}'"
     out="$(collect_paths "${operand}")"
     while IFS= read -r line; do
       if [[ -n "${line}" ]]; then

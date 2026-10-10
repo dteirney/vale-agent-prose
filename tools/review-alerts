@@ -14,6 +14,8 @@ readonly SCRIPT_DIR
 
 # shellcheck source=lib/prose.sh
 source "${SCRIPT_DIR}/../lib/prose.sh"
+# shellcheck source=lib/sysexits.sh
+source "${SCRIPT_DIR}/../lib/sysexits.sh"
 
 # Below this, one persisted alert could put a rule at the top.
 readonly MIN_RECHECKS=5
@@ -37,19 +39,22 @@ then its persisted alerts with their lines, the most frequent first.
                        for all (default ${DEFAULT_ALERT_LIMIT})
   -h, --help           print this and exit
 
-Exit 0 when it reports, 1 when it finds no rechecks, 2 on a usage error.
+Exit 0 when it reports, rechecks or none, and a sysexits(3) code on failure:
+64 on a usage error, 69 when jq is missing, 70 when it can't read the plugin
+version or rank or print the rules, 74 when it can't read the transcripts.
 EOF
 }
 
 usage_error() {
   printf '%s: %s\n' "${PROG}" "$1" >&2
   usage >&2
-  exit 2
+  exit "${EX_USAGE}"
 }
 
+# Print message $2 and exit with code $1.
 die() {
-  printf '%s: %s\n' "${PROG}" "$1" >&2
-  exit 1
+  printf '%s: %s\n' "${PROG}" "$2" >&2
+  exit "$1"
 }
 
 # Print each recheck line the prose hook left in the transcripts under $1, from
@@ -151,7 +156,7 @@ print_rules() {
       return 0
     fi
     # shellcheck disable=SC2310  # its failures exit here
-    print_rule "${rule}" "$3" || die 'cannot print a rule'
+    print_rule "${rule}" "$3" || die "${EX_SOFTWARE}" 'cannot print a rule'
     shown=$((shown + 1))
   done <<<"$1"
 }
@@ -189,27 +194,27 @@ main() {
   done
   [[ $# -eq 0 ]] || usage_error "expected no operands, got $#"
 
-  command -v jq >/dev/null || die 'jq is required'
+  command -v jq >/dev/null || die "${EX_UNAVAILABLE}" 'jq is required'
 
   local version
   version="$(jq -r .version "${SCRIPT_DIR}/../.claude-plugin/plugin.json")" \
-    || die 'cannot read the plugin version'
+    || die "${EX_SOFTWARE}" 'cannot read the plugin version'
 
   local projects="${CLAUDE_CONFIG_DIR:-${HOME}/.claude}/projects"
   local rechecks=''
   if [[ -d "${projects}" ]]; then
     # shellcheck disable=SC2310  # its failures exit here
     rechecks="$(read_rechecks "${projects}" "${version}")" \
-      || die "cannot read the transcripts under ${projects}"
+      || die "${EX_IOERR}" "cannot read the transcripts under ${projects}"
   fi
   if [[ -z "${rechecks}" ]]; then
     prose::message review-alerts/no-records "${projects}" "${version}"
-    return 1
+    return 0
   fi
 
   local rules
   # shellcheck disable=SC2310  # its failures exit here
-  rules="$(rank <<<"${rechecks}")" || die 'cannot rank the rechecks'
+  rules="$(rank <<<"${rechecks}")" || die "${EX_SOFTWARE}" 'cannot rank the rechecks'
   if [[ -z "${rules}" ]]; then
     local count
     count="$(wc -l <<<"${rechecks}")"
