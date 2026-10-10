@@ -58,6 +58,18 @@ lint_commit() {
   [[ "${output}" != *'QWZX'* ]]
 }
 
+@test "a dotted name in backticks reports nothing in the subject, and a bare one does" {
+  printf 'fix: call `config.Load` and config.Load first\n' >"${MSG}"
+  run lint_commit "${MSG}"
+  [ "$(grep -c 'Std.Punctuation.Spacing' <<<"${output}")" -eq 1 ]
+}
+
+@test "a sentence rule reaches the subject" {
+  printf 'ci: add the gate, git hooks and release workflow\n' >"${MSG}"
+  run lint_commit "${MSG}"
+  [[ "${output}" == *'AgentProse.OxfordComma'* ]]
+}
+
 # The package's own route, the one a commit-msg hook without this command takes.
 @test "vale alone leaves the trailers out under the commit message's name" {
   printf '%s\n\n%s\n\nRefs: this does not work\n' \

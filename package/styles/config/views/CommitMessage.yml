@@ -44,8 +44,11 @@ template: |
     ^\s*$$ -> Para
     ^${Trailer}
 scopes:
+  # An untyped scope has no code spans and no sentences, so a name in backticks gets linted and a
+  # sentence-scoped rule never runs.
   - name: subject
     expr: Subject
+    type: md
   - name: body
     expr: Body
     type: md
