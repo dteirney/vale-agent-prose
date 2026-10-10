@@ -1,0 +1,2 @@
+# release-please writes each release's entry from a template its configuration can't change.
+CHANGELOG.md
