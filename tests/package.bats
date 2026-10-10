@@ -68,6 +68,12 @@ lint() {
   [[ "${output}" != *'AiTells.AbstractTriad'* ]]
 }
 
+@test "a missed space after a full stop reports once" {
+  run lint 'The gate passed.Then the hook ran.'
+  [[ "${output}" == *'Std.Punctuation.Spacing'* ]]
+  [ "$(grep -c 'Spacing' <<<"${output}")" -eq 1 ]
+}
+
 @test "a spaced em dash reports only the rewrite" {
   run lint 'The gate — the final check — passed.'
   [[ "${output}" == *'AiTells.Dash'* ]]
