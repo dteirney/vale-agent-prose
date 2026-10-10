@@ -8,7 +8,7 @@ A Vale package and a Claude Code plugin that lint the prose an agent writes. Thi
 
 **Recheck**: The Vale run at the next edit of an alert's file, which finds the alert persisted or absent. An alert has at most one. _Avoid_: Outcome, result, status, state
 
-**Persisted alert**: An alert Vale raises again at the next edit of its file: the same rule, message, and flagged words. It says nothing about whether the agent chose to keep it. _Avoid_: Surviving alert, dismissed alert, kept alert
+**Persisted alert**: An alert Vale raises again at the next edit of its file: the same rule, message, and flagged words. A metric alert flags no words, so the same rule is enough, whatever its score. It says nothing about whether the agent chose to keep it. _Avoid_: Surviving alert, dismissed alert, kept alert
 
 **Absent alert**: An alert Vale no longer raises at the next edit of its file, whatever that edit was for. _Avoid_: Cleared alert, fixed alert, dropped alert
 

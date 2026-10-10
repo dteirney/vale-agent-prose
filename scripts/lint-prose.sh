@@ -36,16 +36,19 @@ recheck() {
   local report
   report="$(cat)" || return 1
 
-  # Each alert matches one occurrence of its rule on its flagged words, so
-  # two alerts on the same words need two occurrences to persist. A metric
-  # rule flags no words, so the key adds the message, which has the value.
+  # An alert matches one occurrence of its rule, message, and flagged words. A
+  # long sentence's alert names only its first word, so two differ only in the
+  # message. A metric alert names no words and has its score in its message. It
+  # matches on its rule alone, so a changed score doesn't count as a fix.
   local defs rechecks=''
   # shellcheck disable=SC2310  # the hook exits 0 on any failure
   if [[ -n "${report}" ]] && defs="$(prose::vale_jq)"; then
     rechecks="$(jq -c --slurpfile saved "$1" "${defs}"'
-      reduce (alerts | [.Check, .Message, .Match] | tojson) as $k ({}; .[$k] += 1)
+      def key(rule; message; match):
+        [rule, match] + (if match == "" then [] else [message] end) | tojson;
+      reduce (alerts | key(.Check; .Message; .Match)) as $k ({}; .[$k] += 1)
       | reduce $saved[0][] as $alert ({left: ., out: []};
-        ([$alert.rule, $alert.message, $alert.match] | tojson) as $k
+        key($alert.rule; $alert.message; $alert.match) as $k
         | if (.left[$k] // 0) > 0
           then .left[$k] -= 1 | .out += [{recheck: "persisted"} + $alert]
           else .out += [{recheck: "absent"} + $alert]

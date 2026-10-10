@@ -354,6 +354,18 @@ readonly LONG_B='This sentence keeps going and going with clause after clause af
   [ "$(jq -r 'select(.rule == "Std.Readability.SentenceLength" and .line == 3) | .recheck' <<<"${stderr}")" = persisted ]
 }
 
+readonly DENSE='The configuration determines which particular validation procedures execute automatically during every subsequent repository operation. Administrators occasionally misunderstand the relationship between individual validation procedures and the corresponding documentation requirements. Consequently, organizational documentation frequently contradicts the operational behavior that administrators observe in production environments. Additional complications originate whenever independent contributors introduce contradictory modifications simultaneously across multiple repositories. Eventually, accumulated inconsistencies necessitate comprehensive reconciliation activities involving considerable organizational coordination and substantial investigative documentation. Therefore, preventive verification remains considerably preferable to retrospective reconciliation whenever organizational resources permit. Experienced administrators recommend establishing automated verification procedures immediately after initial repository configuration. Unfortunately, organizational priorities frequently postpone verification infrastructure indefinitely until significant operational disruptions demonstrate its importance.'
+
+# A metric alert's message carries its score, so a score that moves without
+# clearing the rule still leaves the alert standing.
+@test "a metric alert whose score moves reports persisted" {
+  printf '%s\n' "${DENSE}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf '%s Verification matters.\n' "${DENSE}" >"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "$(rechecks AgentProse.FleschReadingEase)" = persisted ]
+}
+
 # The hook hands back only what the edit touched, and the recheck reads the
 # whole file.
 @test "an alert on a line the next edit didn't touch reports persisted" {
