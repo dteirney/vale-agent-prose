@@ -203,8 +203,9 @@ commit_all() {
   printf 'Run the gate.\n' >"${WORK}/b.md"
   commit_all base
   printf '\n%s\n' "${TRIAD}" >>"${WORK}/b.md"
+  printf '%s\n' "${TRIAD}" >"${WORK}/untracked.md"
   cd "${WORK}"
-  run lint_branch --base HEAD a.md
+  run lint_branch --base HEAD a.md untracked.md
   [ "${status}" -eq 0 ]
   [ -z "${output}" ]
 }
@@ -214,6 +215,17 @@ commit_all() {
   cd "${WORK}"
   run lint_branch nothing-here
   [ "${status}" -eq 66 ]
+}
+
+@test "lint-branch-prose with a path outside the repository is a usage error" {
+  mkdir "${WORK}/repo"
+  git -C "${WORK}/repo" init -q
+  git -C "${WORK}/repo" -c user.name=t -c user.email=t@t commit -q --allow-empty -m base
+  printf 'Run the gate.\n' >"${WORK}/outside.md"
+  cd "${WORK}/repo"
+  run --separate-stderr lint_branch --base HEAD ../outside.md
+  [ "${status}" -eq 64 ]
+  [[ "${stderr}" == *"'../outside.md' is outside the repository"* ]]
 }
 
 @test "lint-branch-prose reads a path from the directory it runs in" {

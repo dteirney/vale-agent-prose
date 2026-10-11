@@ -34,8 +34,8 @@ Past the limit it prints a count per rule instead of the rest. One rule with
 hundreds of hits is a question about that rule, not about hundreds of lines.
 
 Exit 0 when clean, 1 when it reports an alert, and a sysexits(3) code on
-failure: 64 on a usage error or outside a repository, 66 when a path doesn't
-exist, 69 when git or vale is missing, 70 when git fails.
+failure: 64 on a usage error, outside a repository or with a path outside it,
+66 when a path doesn't exist, 69 when git or vale is missing, 70 when git fails.
 EOF
 }
 
@@ -108,6 +108,8 @@ main() {
   local operand
   for operand in "$@"; do
     [[ -e "${operand}" ]] || die "${EX_NOINPUT}" "no such path '${operand}'"
+    git --literal-pathspecs ls-files -- "${operand}" >/dev/null 2>&1 \
+      || die "${EX_USAGE}" "'${operand}' is outside the repository"
   done
 
   [[ -n "${base}" ]] || base="$(default_base)"
