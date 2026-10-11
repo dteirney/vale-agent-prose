@@ -214,7 +214,7 @@ The commit message hook runs a copy of the check that the plugin keeps in its da
 
 ## Contributing
 
-Read [CONTRIBUTING.md](.github/CONTRIBUTING.md) to set up a checkout. [AGENTS.md](AGENTS.md) covers how a command here behaves, how the shell is written, and what belongs in a comment. `tools/check` is the gate, and this repository's own `githooks/commit-msg` runs `tools/lint-commit-prose`.
+Read the [contributing guide](.github/CONTRIBUTING.md) to set up a checkout. The [commands' instructions](tools/AGENTS.md) cover how a command here behaves. The [shell rule](.claude/rules/shell.md) covers how the shell is written, and the [agent instructions](AGENTS.md) what belongs in a comment. `tools/check` is the gate, and this repository's own `githooks/commit-msg` runs `tools/lint-commit-prose`.
 
 ## License
 

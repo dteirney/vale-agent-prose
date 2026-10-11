@@ -3,6 +3,8 @@
   "version": "0.2",
   "language": "en",
   "useGitignore": true,
+  // Only a name no dictionary could hold. A file whose every builtin flags
+  // needs a languageId override below, not its words here.
   "words": [
     "adoc",
     "adposition",
