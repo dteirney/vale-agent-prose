@@ -1,6 +1,7 @@
 ---
 name: doctor
-description: Check whether the prose checks can run here, without changing anything. Use when the prose hook or the commit message check reports nothing you expected it to, after running setup, or when the user asks whether the plugin is working.
+description: Check whether the prose checks can run here, without changing anything.
+disable-model-invocation: true
 ---
 
 # Check the prose checks
