@@ -12,9 +12,11 @@ A Vale package and a Claude Code plugin that lint the prose an agent writes. The
 
 **Prose hook**: the plugin's hook that lints each file the agent writes and hands the alerts back to the agent. _Avoid_: lint hook, edit hook
 
-**Repository configuration**: a repository's own Vale configuration, which decides the rules for that repository. This repository's own lints only this repository and doesn't ship. _Avoid_: local configuration, project configuration
+**Commit hook**: the git hook the plugin installs for every repository, which lints each commit message before the commit lands. _Avoid_: commit message check, commit-msg hook, commit message hook
 
-**Default configuration**: the Vale configuration the plugin uses where a repository has no repository configuration. It lists the package and nothing else. _Avoid_: fallback configuration, global configuration
+**Own configuration**: a repository's own Vale configuration, which decides the rules for that repository. This repository's own lints only this repository and doesn't ship. _Avoid_: repository configuration, local configuration, project configuration
+
+**Default configuration**: the Vale configuration the plugin uses where a repository has no own configuration. It lists the package and nothing else. _Avoid_: fallback configuration, global configuration
 
 **Data directory**: the folder Claude Code keeps for the plugin across updates, with the default configuration and the alerts the prose hook has handed back. _Avoid_: cache, state folder
 
@@ -42,4 +44,4 @@ A Vale package and a Claude Code plugin that lint the prose an agent writes. The
 
 **Package-wide false positive**: a false positive another repository's prose would raise too, fixed once in the package. _Avoid_: package defect, upstream bug
 
-**Repository-only false positive**: a false positive that only one repository's prose produces, fixed in its repository configuration. _Avoid_: repository defect, repository exception, local override
+**Repository-only false positive**: a false positive that only one repository's prose produces, fixed in that repository's own configuration. _Avoid_: repository defect, repository exception, local override
