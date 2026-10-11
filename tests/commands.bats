@@ -3,6 +3,8 @@
 # tools/lint-prose and tools/lint-branch-prose. The branch command's lint needs
 # a commit to diff against, so a test that lints with it commits a base first.
 
+bats_require_minimum_version 1.5.0
+
 setup_file() {
   REPO="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
   export REPO
@@ -71,6 +73,66 @@ lint_branch() {
   [ "${status}" -eq 1 ]
   [[ "${output}" != *'value too great'* ]]
   [[ "${output}" != *'Alerts by rule:'* ]]
+}
+
+@test "lint-prose --by-file prints a count per file, highest first, and nothing else" {
+  mkdir "${WORK}/docs"
+  printf '%s\n' "${TRIAD}" >"${WORK}/docs/one.md"
+  printf '%s\n\n%s\n' "${TRIAD}" "${TRIAD}" >"${WORK}/docs/two.md"
+  printf 'Run the gate.\n' >"${WORK}/docs/clean.md"
+  cd "${WORK}"
+  run --separate-stderr lint_prose --by-file docs
+  [ "${status}" -eq 1 ]
+  [ "${#lines[@]}" -eq 2 ]
+  [[ "${lines[0]}" =~ ^\ *2\ docs/two\.md$ ]]
+  [[ "${lines[1]}" =~ ^\ *1\ docs/one\.md$ ]]
+}
+
+# cspell:ignore gaet
+@test "lint-prose --by-file counts Vale alerts only" {
+  printf '%s\n\nRun the gaet.\n' "${TRIAD}" >"${WORK}/mixed.md"
+  printf 'Run the gaet.\n' >"${WORK}/spelling.md"
+  cd "${WORK}"
+  run lint_prose spelling.md
+  [[ "${output}" == *'[cspell]'* ]]
+  run --separate-stderr lint_prose --by-file mixed.md spelling.md
+  [ "${status}" -eq 1 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [[ "${lines[0]}" =~ ^\ *1\ mixed\.md$ ]]
+}
+
+@test "lint-prose --by-file exits 1 when every alert is cspell's, and prints nothing" {
+  printf 'Run the gaet.\n' >"${WORK}/a.md"
+  cd "${WORK}"
+  run --separate-stderr lint_prose --by-file a.md
+  [ "${status}" -eq 1 ]
+  [ -z "${output}" ]
+}
+
+@test "lint-prose --by-file with a missing path exits with no input" {
+  run lint_prose --by-file "${WORK}/nothing-here"
+  [ "${status}" -eq 66 ]
+}
+
+@test "lint-prose --by-file lists every file past the limit" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/a.md"
+  printf '%s\n' "${TRIAD}" >"${WORK}/b.md"
+  run --separate-stderr lint_prose --limit 1 --by-file "${WORK}/a.md" "${WORK}/b.md"
+  [ "${status}" -eq 1 ]
+  [ "${#lines[@]}" -eq 2 ]
+}
+
+@test "lint-prose --by-file exits 0 and says nothing on a clean file" {
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  run lint_prose --by-file "${WORK}/a.md"
+  [ "${status}" -eq 0 ]
+  [ -z "${output}" ]
+}
+
+@test "lint-prose --help describes --by-file" {
+  run lint_prose --help
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *'--by-file'* ]]
 }
 
 @test "lint-prose with no operand is a usage error" {

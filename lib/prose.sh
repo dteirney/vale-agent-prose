@@ -388,3 +388,10 @@ prose::report() {
   printf 'Alerts by rule:\n'
   printf '%s\n' "${alerts}" | cut -d: -f4 | sort | uniq -c | sort -rn
 }
+
+# Print each file in the alert lines on stdin with its count of Vale alerts,
+# highest first. A file whose only alerts are cspell's prints nothing.
+# shellcheck disable=SC2312  # every caller sets pipefail
+prose::report_by_file() {
+  awk -F: '$4 != "cspell" { print $1 }' | sort | uniq -c | sort -k1,1nr -k2
+}
