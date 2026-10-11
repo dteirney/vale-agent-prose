@@ -16,9 +16,9 @@ Where the user named no paths, ask which paths to fix. Run the lint over the pat
 "${CLAUDE_PLUGIN_ROOT}/tools/lint-prose" --data-dir "${CLAUDE_PLUGIN_DATA}" --by-file <paths>
 ```
 
-Each stdout line is `<count> <path>`, highest count first. Read only that list. Then branch on the exit code:
+Each stdout line is `<count> <path>`, highest count first. Read only that list, and show the user anything on stderr. Then branch on the exit code:
 
-- **0:** the paths have no alerts. Tell the user and stop.
+- **0:** the paths have no alerts. Tell the user and stop. A stderr warning that the configuration names no styles means few rules ran, if any. Say the result isn't evidence the prose is clean.
 - **1 with no lines:** the lint found only unknown words, which this skill leaves alone. Tell the user and stop.
 - **1 with lines:** go to step 2.
 - **Anything else:** show the user the stderr and the exit code, and stop.
