@@ -25,7 +25,13 @@ What the package reports on it:
  1:146  suggestion  Negated deduction 'no state, so there's no race': say what the thing does, then the action it licenses.  AgentProse.NegDeduction
 ```
 
-An alert says a line matched a pattern, not that the line is wrong. The plugin's `settle-prose-alert` skill is how the agent decides which.
+The hook reports only on the paragraphs and comments an edit touches. The fix-prose skill fixes the prose already in a repository. Name the files and directories to fix:
+
+```
+/vale-agent-prose:fix-prose docs/ README.md
+```
+
+It hands each file with an alert to its own subagent. An alert says a line matched a pattern, and the line may still be right. The subagent fixes a line where it has the defect the alert names. It leaves a line where the fix would change what the line says. The skill ends with a report of the lines left, each with a reason. It commits nothing.
 
 ### What AgentProse adds
 
