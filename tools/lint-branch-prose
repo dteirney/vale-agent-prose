@@ -17,7 +17,7 @@ readonly DEFAULT_LIMIT=40
 
 usage() {
   cat <<EOF
-usage: ${PROG} [--base <ref>] [--limit <n>] [<path>...]
+usage: ${PROG} [--base <ref>] [--limit <n>] [--by-file] [<path>...]
        ${PROG} -h
 
 Lint the prose this branch added, uncommitted edits to tracked files included.
@@ -29,6 +29,8 @@ the directory you run ${PROG} in, so you can pass that path back.
 
   --base <ref>   compare against <ref> rather than the default branch
   --limit <n>    print at most <n> alerts, 0 for all (default ${DEFAULT_LIMIT})
+  --by-file      print only '<count> <path>' for each file with a Vale alert,
+                 highest count first, and every file whatever the limit
   -h, --help     print this and exit
 
 Past the limit it prints a count per rule instead of the rest. One rule with
@@ -36,7 +38,8 @@ hundreds of hits is a question about that rule, not about hundreds of lines.
 
 Exit 0 when clean, 1 when it reports an alert, and a sysexits(3) code on
 failure: 64 on a usage error, outside a repository or with a path outside it,
-66 when a path doesn't exist, 69 when git or vale is missing, 70 when git fails.
+66 when a path doesn't exist, 69 when git or vale is missing, 70 when git
+fails. --by-file leaves out cspell alerts but still exits 1 on them.
 EOF
 }
 
@@ -98,12 +101,14 @@ relative_paths() {
 main() {
   local base=''
   local limit="${DEFAULT_LIMIT}"
+  local by_file=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -h | --help)
         usage
         return 0
         ;;
+      --by-file) by_file=1 ;;
       --base)
         [[ $# -ge 2 ]] || usage_error '--base needs a ref'
         base="$2"
@@ -189,7 +194,11 @@ main() {
   alerts="$(relative_paths "${cwd}" <<<"${alerts}")" \
     || die "${EX_SOFTWARE}" 'git ls-files failed while naming the files'
 
-  prose::report "${limit}" "${alerts}"
+  if [[ "${by_file}" -eq 1 ]]; then
+    prose::report_by_file <<<"${alerts}"
+  else
+    prose::report "${limit}" "${alerts}"
+  fi
   return 1
 }
 

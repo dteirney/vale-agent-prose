@@ -299,6 +299,94 @@ commit_all() {
   [[ "${output}" == *'b.md:3:'* ]]
 }
 
+@test "lint-branch-prose --by-file counts only the alerts on added lines, highest first" {
+  git -C "${WORK}" init -q
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  printf '%s\n' "${TRIAD}" >"${WORK}/b.md"
+  printf 'Run the gate.\n' >"${WORK}/clean.md"
+  commit_all base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/a.md"
+  printf '\n%s\n\n%s\n' "${TRIAD}" "${TRIAD}" >>"${WORK}/b.md"
+  printf '\nRun it again.\n' >>"${WORK}/clean.md"
+  cd "${WORK}"
+  run --separate-stderr lint_branch --base HEAD --by-file
+  [ "${status}" -eq 1 ]
+  [ "${#lines[@]}" -eq 2 ]
+  [[ "${lines[0]}" =~ ^\ *2\ b\.md$ ]]
+  [[ "${lines[1]}" =~ ^\ *1\ a\.md$ ]]
+}
+
+@test "lint-branch-prose --by-file counts Vale alerts only" {
+  git -C "${WORK}" init -q
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  commit_all base
+  printf '\n%s\n\nRun the gaet.\n' "${TRIAD}" >>"${WORK}/a.md"
+  cd "${WORK}"
+  run --separate-stderr lint_branch --base HEAD --by-file
+  [ "${status}" -eq 1 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [[ "${lines[0]}" =~ ^\ *1\ a\.md$ ]]
+}
+
+@test "lint-branch-prose --by-file exits 0 and says nothing on a clean branch" {
+  git -C "${WORK}" init -q
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  commit_all base
+  printf '\nRun it again.\n' >>"${WORK}/a.md"
+  cd "${WORK}"
+  run lint_branch --base HEAD --by-file
+  [ "${status}" -eq 0 ]
+  [ -z "${output}" ]
+}
+
+@test "lint-branch-prose --by-file exits 1 when every alert is cspell's, and prints nothing" {
+  git -C "${WORK}" init -q
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  commit_all base
+  printf '\nRun the gaet.\n' >>"${WORK}/a.md"
+  cd "${WORK}"
+  run lint_branch --base HEAD a.md
+  [[ "${output}" == *'[cspell]'* ]]
+  run --separate-stderr lint_branch --base HEAD --by-file a.md
+  [ "${status}" -eq 1 ]
+  [ -z "${output}" ]
+}
+
+@test "lint-branch-prose --by-file takes --base and a path from the directory it runs in" {
+  git -C "${WORK}" init -q
+  mkdir "${WORK}/docs"
+  printf 'Run the gate.\n' >"${WORK}/docs/a.md"
+  printf 'Run the gate.\n' >"${WORK}/b.md"
+  commit_all base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/docs/a.md"
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/b.md"
+  commit_all added
+  cd "${WORK}/docs"
+  run --separate-stderr lint_branch --base HEAD~1 --by-file a.md
+  [ "${status}" -eq 1 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [[ "${lines[0]}" =~ ^\ *1\ a\.md$ ]]
+}
+
+@test "lint-branch-prose --by-file lists every file past the limit" {
+  git -C "${WORK}" init -q
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  printf 'Run the gate.\n' >"${WORK}/b.md"
+  commit_all base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/a.md"
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/b.md"
+  cd "${WORK}"
+  run --separate-stderr lint_branch --base HEAD --limit 1 --by-file
+  [ "${status}" -eq 1 ]
+  [ "${#lines[@]}" -eq 2 ]
+}
+
+@test "lint-branch-prose --help describes --by-file" {
+  run lint_branch --help
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *'--by-file'* ]]
+}
+
 @test "lint-branch-prose --help shows the paths in its usage line" {
   run lint_branch --help
   [ "${status}" -eq 0 ]
