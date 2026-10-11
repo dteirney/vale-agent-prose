@@ -341,6 +341,48 @@ readonly LONG='before it parses the rest of the body and every section after it 
   [ "$(jq -r 'select(.rule == "AgentProse.AbstractTriad") | .config' <<<"${stderr}")" = own ]
 }
 
+@test "an alert left at the last edit is counted, and not shown again" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf '\n%s\n' "${NEG}" >>"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  local context
+  context="$(jq -r .hookSpecificOutput.additionalContext <<<"${output}")"
+  [[ "${context}" == *'AgentProse.NegDeduction'* ]]
+  [[ "${context}" != *'AgentProse.AbstractTriad'* ]]
+  [[ "${context}" == *'1 alerts you left at your last edit to this file still stand'* ]]
+}
+
+@test "an alert left is counted where the same words sit in an untouched paragraph above" {
+  git -C "${WORK}" init -q
+  printf '%s\n\n%s\n' "${TRIAD}" "${FIRST}" >"${WORK}/notes.md"
+  git -C "${WORK}" add notes.md
+  printf '%s\n\n%s\n' "${TRIAD}" "${TRIAD_REWORDED}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf '%s\n\n%s\n%s\n' "${TRIAD}" "${TRIAD_REWORDED}" 'It runs nightly.' >"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [[ "${output}" != *'AgentProse.AbstractTriad'* ]]
+}
+
+@test "an alert left at two edits running still rechecks at the third" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf '\n%s\n' "${NEG}" >>"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null 2>&1
+  printf '\n%s\n' "${TRIAD_FIXED}" >>"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "$(rechecks AgentProse.AbstractTriad)" = persisted ]
+}
+
+@test "an edit with only alerts left before hands nothing back" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  edit_in s1 "${WORK}/notes.md" >/dev/null
+  printf '\n%s\n' "${TRIAD_FIXED}" >>"${WORK}/notes.md"
+  run --separate-stderr edit_in s1 "${WORK}/notes.md"
+  [ "${status}" -eq 0 ]
+  [ -z "${output}" ]
+}
+
 @test "a rule's replacement prints on a note line" {
   printf '%s\n' 'Edit the config file.' >"${WORK}/notes.md"
   run lint_file "${WORK}/notes.md"

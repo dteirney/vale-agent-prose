@@ -29,6 +29,35 @@ saved_file() {
   printf '%s\n' "${dir}/${key}.json"
 }
 
+# An alert matches one occurrence of its rule, message, and flagged words. A
+# long sentence's alert names only its first word, so two differ only in the
+# message. A metric alert names no words and has its score in its message. It
+# matches on its rule alone, so a changed score doesn't count as a fix.
+readonly KEY_DEF='def key(rule; message; match):
+  [rule, match] + (if match == "" then [] else [message] end) | tojson;'
+
+# Print each of the alert lines in $2 that matches an alert saved in $1. Those
+# are the alerts handed back at the last edit that Vale raises again. Vale's
+# JSON report comes on stdin.
+persisted_lines() {
+  [[ -f "$1" ]] || return 0
+  local defs
+  # shellcheck disable=SC2310  # the hook exits 0 on any failure
+  defs="$(prose::vale_jq)" || return 1
+  # The same words elsewhere in the file would otherwise use up a saved match.
+  jq -r --slurpfile saved "$1" --arg touched "$2" "${defs}${KEY_DEF}"'
+    ($touched | split("\n") | INDEX(.)) as $lines
+    | (reduce $saved[0][] as $alert ({};
+      .[key($alert.rule; $alert.message; $alert.match)] += 1)) as $left
+    | foreach (alerts | select($lines[line])) as $x ({left: $left};
+        key($x.Check; $x.Message; $x.Match) as $k
+        | if (.left[$k] // 0) > 0
+          then .left[$k] -= 1 | .out = ($x | line)
+          else .out = null
+          end;
+        .out // empty)'
+}
+
 # Print the alert lines on stdin with the working directory before each path
 # that isn't absolute.
 absolute_paths() {
@@ -45,16 +74,10 @@ recheck() {
   local report
   report="$(cat)" || return 1
 
-  # An alert matches one occurrence of its rule, message, and flagged words. A
-  # long sentence's alert names only its first word, so two differ only in the
-  # message. A metric alert names no words and has its score in its message. It
-  # matches on its rule alone, so a changed score doesn't count as a fix.
   local defs rechecks=''
   # shellcheck disable=SC2310  # the hook exits 0 on any failure
   if [[ -n "${report}" ]] && defs="$(prose::vale_jq)"; then
-    rechecks="$(jq -c --slurpfile saved "$1" "${defs}"'
-      def key(rule; message; match):
-        [rule, match] + (if match == "" then [] else [message] end) | tojson;
+    rechecks="$(jq -c --slurpfile saved "$1" "${defs}${KEY_DEF}"'
       reduce (alerts | key(.Check; .Message; .Match)) as $k ({}; .[$k] += 1)
       | reduce $saved[0][] as $alert ({left: ., out: []};
         key($alert.rule; $alert.message; $alert.match) as $k
@@ -217,31 +240,51 @@ main() {
     )" || alerts=''
   fi
 
-  local handed_back=''
-  if [[ -n "${alerts}" ]]; then
+  local saved=''
+  # shellcheck disable=SC2310  # a failure here must leave the hook silent
+  saved="$(saved_file "${session}" "${file}" 2>/dev/null)" || saved=''
+
+  local persisted='' fresh="${alerts}"
+  if [[ -n "${saved}" && -n "${alerts}" ]]; then
     # shellcheck disable=SC2310  # the hook exits 0 on any failure
-    handed_back="$(prose::hook_alerts "${alerts}")" || exit 0
+    persisted="$(persisted_lines "${saved}" "${alerts}" <<<"${report}" \
+      2>/dev/null)" || persisted=''
+    if [[ -n "${persisted}" ]]; then
+      fresh="$(grep -vxF -f <(printf '%s\n' "${persisted}") <<<"${alerts}")" \
+        || fresh=''
+    fi
+  fi
+
+  local handed_back=''
+  if [[ -n "${fresh}" ]]; then
+    # shellcheck disable=SC2310  # the hook exits 0 on any failure
+    handed_back="$(prose::hook_alerts "${fresh}")" || exit 0
   fi
 
   # The model never receives a hook's stderr when it exits 0, but the
   # transcript keeps it. A recheck printed before a failure still counts.
-  local saved
-  # shellcheck disable=SC2310  # a failure here must leave the hook silent
-  if saved="$(saved_file "${session}" "${file}" 2>/dev/null)"; then
+  if [[ -n "${saved}" ]]; then
     local rechecks
+    # shellcheck disable=SC2310  # the hook exits 0 on any failure
     rechecks="$(recheck "${saved}" <<<"${report}" 2>/dev/null)" || true
     if [[ -n "${rechecks}" ]]; then
       printf '%s\n' "${rechecks}" >&2 || true
     fi
-    save_alerts "${saved}" "${file}" "${handed_back}" "${root}" "${config}" \
-      <<<"${report}" 2>/dev/null || true
+    # shellcheck disable=SC2310  # the hook exits 0 on any failure
+    save_alerts "${saved}" "${file}" "${handed_back}${persisted:+$'\n'${persisted}}" \
+      "${root}" "${config}" <<<"${report}" 2>/dev/null || true
   fi
 
   [[ -n "${handed_back}" ]] || exit 0
 
-  local shown
+  local shown="${handed_back}" count
+  if [[ -n "${persisted}" ]]; then
+    count="$(wc -l <<<"${persisted}" | tr -d ' ')"
+    # shellcheck disable=SC2310  # the hook exits 0 on any failure
+    shown+=$'\n'"$(prose::message lint-prose/persisted "${count}")" || true
+  fi
   # shellcheck disable=SC2310  # the hook exits 0 on any failure
-  shown="$(absolute_paths <<<"${handed_back}")" || exit 0
+  shown="$(absolute_paths <<<"${shown}")" || exit 0
   prose::hook_context "${shown}" lint-prose/context
   exit 0
 }
