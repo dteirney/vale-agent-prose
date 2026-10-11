@@ -212,4 +212,6 @@ Read [CONTRIBUTING.md](.github/CONTRIBUTING.md) to set up a checkout. [AGENTS.md
 
 ## License
 
-MIT. [LICENSE](LICENSE) also has the notice for the View derived from [Commits](https://github.com/jdkato/commits). It has the notices for the rules derived from [vale-ai-tells](https://github.com/krishnasunkam/vale-ai-tells), [Std](https://github.com/vale-cli/Std), [proselint](https://github.com/vale-cli/proselint), [write-good](https://github.com/errata-ai/write-good), and the [Vale Harper style](https://github.com/vale-cli/Harper).
+MIT, with the [Commons Clause](https://commonsclause.com/) added. You may use it, change it and share it, at work too. You may not sell it. The clause bars charging others for a product or service whose value comes entirely or substantially from this one. That covers paid hosting or support for it too. It isn't an open source license for that reason.
+
+[LICENSE](LICENSE) also has the notice for the View derived from [Commits](https://github.com/jdkato/commits). It has the notices for the rules derived from [vale-ai-tells](https://github.com/krishnasunkam/vale-ai-tells), [Std](https://github.com/vale-cli/Std), [proselint](https://github.com/vale-cli/proselint), [write-good](https://github.com/errata-ai/write-good), and the [Vale Harper style](https://github.com/vale-cli/Harper).

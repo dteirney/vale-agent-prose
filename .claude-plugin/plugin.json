@@ -6,7 +6,7 @@
     "name": "David Teirney"
   },
   "repository": "https://github.com/dteirney/vale-agent-prose",
-  "license": "MIT",
+  "license": "LicenseRef-MIT-Commons-Clause",
   "keywords": [
     "vale",
     "prose",
