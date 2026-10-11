@@ -59,7 +59,7 @@ Each alert is one line, `file:line:column: message [rule]`. Some name the flagge
 For each alert:
 
 1. Read the line, and the one before it. The rule matched a span, and the claim is usually wider than the span.
-2. Ask whether the line has the defect the alert names, with the padding test in "${CLAUDE_PLUGIN_ROOT}/skills/padding-test.md". Where the words were padding, fix the line. Where they were doing work, leave the line.
+2. Ask whether the line has the defect the alert names, with the defect test in "${CLAUDE_PLUGIN_ROOT}/skills/defect-test.md". Where it has, fix the line. Where it hasn't, leave the line.
 3. Where you fix the line, compare the old and the new line and say what each asserts. Revert where the new one asserts something the old one didn't, or drops a condition the old one had.
 4. Where you leave the line, quote the words that carry your reason, or name the file or command you checked. A restatement of the rule's message isn't a reason.
 
