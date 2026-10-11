@@ -60,6 +60,44 @@ data_dir() {
   [[ "${output}" == *'a.md:1:'*'AgentProse.AbstractTriad'* ]]
 }
 
+@test "lint-prose walks a repository's tracked and untracked files, and skips what git ignores" {
+  git init -q "${WORK}"
+  printf 'ignored/\n' >"${WORK}/.gitignore"
+  mkdir "${WORK}/docs" "${WORK}/ignored"
+  printf '%s\n' "${TRIAD}" >"${WORK}/docs/tracked.md"
+  commit_all base
+  printf '%s\n' "${TRIAD}" >"${WORK}/docs/untracked.md"
+  printf '%s\n' "${TRIAD}" >"${WORK}/ignored/a.md"
+  cd "${WORK}"
+  run --separate-stderr lint_prose --by-file .
+  [ "${status}" -eq 1 ]
+  [ "${#lines[@]}" -eq 2 ]
+  [[ "${output}" == *'docs/tracked.md'* ]]
+  [[ "${output}" == *'docs/untracked.md'* ]]
+}
+
+@test "lint-prose walks a directory git ignores when you name it" {
+  git init -q "${WORK}"
+  printf 'ignored/\n' >"${WORK}/.gitignore"
+  mkdir "${WORK}/ignored"
+  printf '%s\n' "${TRIAD}" >"${WORK}/ignored/a.md"
+  cd "${WORK}"
+  run --separate-stderr lint_prose --by-file ignored
+  [ "${status}" -eq 1 ]
+  [[ "${lines[0]}" =~ ^\ *1\ ignored/a\.md$ ]]
+}
+
+@test "lint-prose leaves out a symlink when it walks a repository" {
+  git init -q "${WORK}"
+  printf '%s\n' "${TRIAD}" >"${WORK}/a.md"
+  ln -s a.md "${WORK}/link.md"
+  cd "${WORK}"
+  run --separate-stderr lint_prose --by-file .
+  [ "${status}" -eq 1 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [[ "${lines[0]}" =~ a\.md$ ]]
+}
+
 @test "lint-prose exits 0 and says nothing on a clean file" {
   printf 'Run the gate.\n' >"${WORK}/a.md"
   run lint_prose "${WORK}/a.md"

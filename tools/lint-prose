@@ -25,8 +25,9 @@ usage: ${PROG} [--limit <n>] [--by-file] [--data-dir <dir>] <path>...
        ${PROG} -h
 
 Lint the prose in the paths you name. Vale reads the comments in a source file
-and the whole of a markdown file. A directory is walked. Your shell expands a
-glob before ${PROG} sees it, so a pattern works as a list of paths.
+and the whole of a markdown file. A directory is walked, skipping the files git
+ignores, unless git ignores the directory you named. Your shell expands a glob
+before ${PROG} sees it, so a pattern works as a list of paths.
 
   --limit <n>       print at most <n> alerts, 0 for all (default ${DEFAULT_LIMIT})
   --by-file         print only '<count> <path>' for each file with a Vale
@@ -59,16 +60,33 @@ die() {
   exit "$1"
 }
 
-# Expand one operand into the files to lint. A directory is walked; a file
-# stands for itself. Symlinked directories stay out, because -L on a tree that
-# points at itself never ends.
+# Print the files git tracks or would track under directory $1. A symlink stays
+# out, as the find walk leaves it, so a linked file isn't linted twice.
+walk_repository() {
+  local dir="$1" path
+  git -C "${dir}" ls-files -z --cached --others --exclude-standard \
+    | while IFS= read -r -d '' path; do
+      if [[ -f "${dir%/}/${path}" && ! -L "${dir%/}/${path}" ]]; then
+        printf '%s\n' "${dir%/}/${path}"
+      fi
+    done | sort -u
+}
+
+# Expand one operand into the files to lint. A file stands for itself. A
+# directory git ignores goes to find, because git would list nothing in it and
+# the lint would call it clean. find leaves symlinked directories out, because
+# -L on a tree that points at itself never ends.
 collect_paths() {
   local operand="$1"
-  if [[ -d "${operand}" ]]; then
+  if [[ ! -d "${operand}" ]]; then
+    printf '%s\n' "${operand}"
+  elif git -C "${operand}" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    && ! git -C "${operand}" check-ignore -q . 2>/dev/null; then
+    # shellcheck disable=SC2310  # one pipeline, so with pipefail its status is the walk's
+    walk_repository "${operand}" || die "${EX_IOERR}" "cannot walk '${operand}'"
+  else
     find "${operand}" -type f -not -path '*/.git/*' | sort \
       || die "${EX_IOERR}" "cannot walk '${operand}'"
-  else
-    printf '%s\n' "${operand}"
   fi
 }
 
