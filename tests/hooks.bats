@@ -108,6 +108,23 @@ readonly TRIAD_FIXED='The gate needs one passing test before anyone trusts it.'
   [[ "${output}" != *'Enforced'* ]]
 }
 
+@test "an alert shows its rule's link where the rule has one" {
+  printf '%s\n' 'The hook exits early; the gate passes.' >"${WORK}/notes.md"
+  run lint_file "${WORK}/notes.md"
+  [[ "$(jq -r .hookSpecificOutput.additionalContext <<<"${output}")" \
+    == *"notes.md:1:"*": use semicolons judiciously: ';' [Google.Semicolons] (https://developers.google.com/style/semicolons)"* ]]
+}
+
+@test "an alert from a rule with no link ends at its message" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  run lint_file "${WORK}/notes.md"
+  local line
+  line="$(jq -r .hookSpecificOutput.additionalContext <<<"${output}" \
+    | grep 'AgentProse.AbstractTriad')"
+  [[ -n "${line}" ]]
+  [[ "${line}" != *'('* ]]
+}
+
 @test "a tracked file leaves out a paragraph the edit didn't touch" {
   git -C "${WORK}" init -q
   printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
@@ -130,7 +147,7 @@ readonly LONG='before it parses the rest of the body and every section after it 
   git -C "${WORK}" add a.py
   printf '# %s\n# %s\nx = 1\n' "${FIRST}" "${LONG}" >"${WORK}/a.py"
   run lint_file "${WORK}/a.py"
-  [[ "${output}" == *'a.py:1:3:Std.Readability.SentenceLength'* ]]
+  [[ "${output}" == *'a.py:1:3: '*'[Std.Readability.SentenceLength]'* ]]
 }
 
 @test "an edit that lengthens a paragraph's sentence reports from the line it starts on" {
@@ -139,7 +156,7 @@ readonly LONG='before it parses the rest of the body and every section after it 
   git -C "${WORK}" add notes.md
   printf '%s\n%s\n' "${FIRST}" "${LONG}" >"${WORK}/notes.md"
   run lint_file "${WORK}/notes.md"
-  [[ "${output}" == *'notes.md:1:1:Std.Readability.SentenceLength'* ]]
+  [[ "${output}" == *'notes.md:1:1: '*'[Std.Readability.SentenceLength]'* ]]
 }
 
 # A code edit beside a comment isn't an edit to the comment.
@@ -159,7 +176,7 @@ readonly LONG='before it parses the rest of the body and every section after it 
   git -C "${WORK}" add a.py
   printf '# %s\n# %s\nx = 1\n' "${FIRST}" "${LONG}" >"${WORK}/a.py"
   run lint_file "${WORK}/a.py"
-  [[ "${output}" == *'a.py:1:3:Std.Readability.SentenceLength'* ]]
+  [[ "${output}" == *'a.py:1:3: '*'[Std.Readability.SentenceLength]'* ]]
 }
 
 @test "a file the repository ignores reports nothing" {
@@ -322,6 +339,23 @@ readonly LONG='before it parses the rest of the body and every section after it 
   [ "${status}" -eq 0 ]
   [ "$(rechecks AgentProse.AbstractTriad)" = persisted ]
   [ "$(jq -r 'select(.rule == "AgentProse.AbstractTriad") | .config' <<<"${stderr}")" = own ]
+}
+
+@test "a rule's replacement prints on a note line" {
+  printf '%s\n' 'Edit the config file.' >"${WORK}/notes.md"
+  run lint_file "${WORK}/notes.md"
+  [[ "$(jq -r .hookSpecificOutput.additionalContext <<<"${output}")" \
+    == *": note: replace 'config' with 'configuration'"* ]]
+}
+
+@test "a tracked file's alerts name it by its absolute path" {
+  git -C "${WORK}" init -q
+  printf '%s\n' "${FIRST}" >"${WORK}/notes.md"
+  git -C "${WORK}" add notes.md
+  printf '%s\n' "${TRIAD}" >"${WORK}/notes.md"
+  run lint_file "${WORK}/notes.md"
+  [[ "$(jq -r .hookSpecificOutput.additionalContext <<<"${output}")" \
+    == *"$(cd "${WORK}" && pwd -P)/notes.md:1:"* ]]
 }
 
 @test "a rewrite of the flagged words reports absent" {

@@ -59,7 +59,8 @@ prose::vale_reads() {
 prose::vale() {
   [[ $# -gt 0 ]] || return 0
   printf '%s\0' "$@" \
-    | xargs -0 vale --no-global --output=line 2>/dev/null || true
+    | xargs -0 vale --no-global --output=JSON 2>/dev/null \
+    | prose::vale_lines || true
 }
 
 # Print the version the plugin's manifest declares. The prose hook writes it into
@@ -108,18 +109,23 @@ prose::cspell() {
   printf '%s\n' "$@" \
     | cspell lint --no-progress --no-summary --no-exit-code \
       ${config:+-c "${config}"} \
-      --issue-template '$filename:$row:$col:cspell:$message ($text)' \
+      --issue-template $'$filename:$row:$col:cspell:$message\t\t$text' \
       --file-list stdin 2>/dev/null || true
 }
 
 # Print jq definitions for Vale's JSON report. `alerts` yields each alert with
-# its Path, and `line` prints one in Vale's line format. An error report has no
-# array of alerts, so `alerts` yields nothing for it.
+# its Path. `line` prints one in Vale's line format. A tab follows it, then the
+# rule's link, the flagged words, and each replacement, each after a tab. An
+# error report has no array of alerts, so `alerts` yields nothing for it.
 prose::vale_jq() {
   # shellcheck disable=SC2016  # jq's own variables
   printf '%s' 'def alerts: to_entries[] | select(.value | type == "array")
     | .key as $path | .value[] | . + {Path: $path};
-  def line: "\(.Path):\(.Line):\(.Span[0]):\(.Check):\(.Message)";'
+  def flat: sub("[\t\n]"; " "; "g");
+  def line: ["\(.Path):\(.Line):\(.Span[0]):\(.Check):\(.Message | flat)",
+      (.Link // ""), (.Match // "" | flat)]
+    + (if .Action.Name == "replace" then (.Action.Params // [] | map(flat)) else [] end)
+    | join("\t");'
 }
 
 # Print Vale's JSON report, read from stdin, in Vale's line format.
@@ -127,6 +133,31 @@ prose::vale_lines() {
   local defs
   defs="$(prose::vale_jq)" || return 1
   jq -r "${defs} alerts | line"
+}
+
+# Print the alert lines on stdin in the GNU Coding Standards' error format,
+# `file:line:column: message: 'words' [rule] (link)`, and any other line as it
+# came. A rule that offers a replacement adds a `note:` line with it. The
+# standard asks for no capital at the start of the message and no closing period.
+prose::gnu_alerts() {
+  # A capital followed by another capital starts an acronym, which keeps its case.
+  jq -Rr '
+    (split("\t") as $f
+      | ($f[0] | capture("^(?<loc>.+?:[0-9]+:[0-9]+):(?<rule>[^:[:space:]]+):(?<msg>.*)$")) as $a
+      | ($a.msg | sub("\\.$"; "")
+        | if test("^[A-Z][a-z]") then (.[0:1] | ascii_downcase) + .[1:] else . end) as $msg
+      | ($f[1] // "") as $link
+      | ($f[2] // "") as $words
+      | ($f[3:] | map(select(. != ""))) as $fixes
+      | "\($a.loc): \($msg)"
+        + (if $words == "" or ($msg | contains($words)) then "" else ": '\''\($words)'\''" end)
+        + " [\($a.rule)]"
+        + (if $link == "" then "" else " (\($link))" end),
+        (if $fixes == [] then empty
+          else "\($a.loc): note: replace '\''\($words)'\'' with "
+            + ($fixes | map("'\''\(.)'\''") | join(" or "))
+          end))
+    // .'
 }
 
 # Run the linters over many files, one process each. Each Vale start reloads
@@ -178,7 +209,8 @@ prose::commit_text() {
 # matches, so a Vale column is the file's column. A cspell column counts from
 # the start of the stripped subject.
 prose::lint_commit() {
-  vale --no-global --output=line --path=COMMIT_EDITMSG <"$1" 2>/dev/null || true
+  vale --no-global --output=JSON --path=COMMIT_EDITMSG <"$1" 2>/dev/null \
+    | prose::vale_lines || true
   command -v cspell >/dev/null 2>&1 || return 0
   local text
   text="$(prose::commit_text "$1")" || return 1
@@ -320,12 +352,13 @@ prose::session_dir_claimed() {
 # Print a PostToolUse hook's JSON that hands the alerts back as context. $1
 # is the alerts from prose::hook_alerts, and $2 the message that goes above them.
 prose::hook_context() {
-  local msg=''
+  local msg='' alerts
   msg="$(prose::message "$2")" || msg=''
+  alerts="$(prose::gnu_alerts <<<"$1")" || return 1
 
   jq -n --arg context "${msg}
 
-$1" \
+${alerts}" \
     '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:$context}}'
 }
 
@@ -341,11 +374,11 @@ prose::report() {
   total="$(printf '%s\n' "${alerts}" | wc -l | tr -d ' ')"
 
   if [[ "${limit}" -eq 0 || "${total}" -le "${limit}" ]]; then
-    printf '%s\n' "${alerts}"
+    prose::gnu_alerts <<<"${alerts}"
     return 0
   fi
 
-  printf '%s\n' "${alerts}" | head -n "${limit}"
+  printf '%s\n' "${alerts}" | head -n "${limit}" | prose::gnu_alerts
   printf '\n[%d more alerts, not shown. Pass --limit 0 for all.]\n\n' \
     "$((total - limit))"
 

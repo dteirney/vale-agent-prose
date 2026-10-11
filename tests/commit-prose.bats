@@ -36,7 +36,7 @@ lint_commit() {
 @test "the type prefix comes off the subject, and the column is the file's" {
   printf 'feat(gate)!: [K2S-1] add clarity, discipline, and rigor\n' >"${MSG}"
   run lint_commit "${MSG}"
-  [[ "${output}" == *':1:26:AgentProse.AbstractTriad'* ]]
+  [[ "${output}" == *':1:26: '*'[AgentProse.AbstractTriad]'* ]]
   [[ "${output}" != *'Google.Parens'* ]]
 }
 

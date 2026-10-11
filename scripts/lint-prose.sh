@@ -29,6 +29,15 @@ saved_file() {
   printf '%s\n' "${dir}/${key}.json"
 }
 
+# Print the alert lines on stdin with the working directory before each path
+# that isn't absolute.
+absolute_paths() {
+  # ENVIRON, because awk -v reads a backslash in a path as an escape.
+  PROSE_DIR="${PWD}" awk '
+    /^[^\/][^:\t]*:[0-9]+:[0-9]+:/ { $0 = ENVIRON["PROSE_DIR"] "/" $0 }
+    { print }'
+}
+
 # Print a recheck line for each alert saved in $1, then remove it. Vale's JSON
 # report on the file comes on stdin, and an empty one rechecks nothing.
 recheck() {
@@ -230,7 +239,10 @@ main() {
 
   [[ -n "${handed_back}" ]] || exit 0
 
-  prose::hook_context "${handed_back}" lint-prose/context
+  local shown
+  # shellcheck disable=SC2310  # the hook exits 0 on any failure
+  shown="$(absolute_paths <<<"${handed_back}")" || exit 0
+  prose::hook_context "${shown}" lint-prose/context
   exit 0
 }
 

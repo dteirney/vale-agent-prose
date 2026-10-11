@@ -88,7 +88,8 @@ main() {
 
   [[ -n "${alerts}" ]] || return 0
 
-  printf '%s\n\n' "${alerts}"
+  prose::gnu_alerts <<<"${alerts}"
+  printf '\n'
   # Git adds nothing when a hook blocks a commit, so this is the committer's only
   # instruction.
   prose::message lint-commit-prose/blocked
