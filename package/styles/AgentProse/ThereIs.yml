@@ -1,0 +1,9 @@
+# write-good.ThereIs with `There's` added. Upstream misses the contraction, so it passed as the
+# fix. The configuration switches the upstream rule off.
+#
+# Derived from write-good, Copyright (c) 2014 Brian Ford, MIT. See LICENSE.
+extends: existence
+message: "'%s' opens the sentence: make the thing that exists its subject."
+level: error
+raw:
+  - '\bThere(?:[^\S\n]*\s[^\S\n]*(?:is|are)\b|[''’](?:s|re)\b)'

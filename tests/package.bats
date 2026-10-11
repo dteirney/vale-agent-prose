@@ -80,6 +80,17 @@ lint() {
   [[ "${output}" != *'Google.EmDash'* ]]
 }
 
+@test "a sentence opening with there is names the fix" {
+  run lint 'There is no lock file in the repository.'
+  [[ "${output}" == *"AgentProse.ThereIs:'There is' opens the sentence: make the thing that exists its subject."* ]]
+  [[ "${output}" != *'write-good.ThereIs'* ]]
+}
+
+@test "a sentence opening with there's is caught" {
+  run lint "There's no lock file in the repository."
+  [[ "${output}" == *"AgentProse.ThereIs:'There's'"* ]]
+}
+
 @test "an inanimate subject taking an active verb is caught" {
   run lint 'Metadata carried by each column decides the sort order.'
   [[ "${output}" == *'AgentProse.InanimateVerb'* ]]

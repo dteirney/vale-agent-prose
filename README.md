@@ -38,7 +38,9 @@ Rules the published packages miss:
 | `SourcePath` | A source file named in a comment, which a rename breaks |
 | `FleschReadingEase` | A reading-ease score, gated so short text doesn't report |
 
-It also replaces four upstream rules with copies. `AbstractTriad` copies `AiTells.AbstractTriad`, and widens it to catch three abstract nouns joined by `or`. The others copy `Std.Punctuation.OxfordComma`, `Harper.DiscourseMarkers` and `proselint.But`. Vale matches `^` and `$` at every line, so each original fires where a hard wrap starts or ends a line. Each copy anchors to the whole sentence or paragraph instead.
+It also replaces upstream rules with copies. `AbstractTriad` copies `AiTells.AbstractTriad`, and widens it to catch three abstract nouns joined by `or`. `OxfordComma`, `DiscourseMarkers` and `But` copy the Std, Harper, and proselint rules of those names. Vale matches `^` and `$` at every line, so each original fires where a hard wrap starts or ends a line. Each copy anchors to the whole sentence or paragraph instead.
+
+`ThereIs` copies write-good's rule of that name, and adds `There's`, which the original lets through.
 
 ### An opinionated configuration
 
@@ -210,4 +212,4 @@ Read [CONTRIBUTING.md](.github/CONTRIBUTING.md) to set up a checkout. [AGENTS.md
 
 ## License
 
-MIT. [LICENSE](LICENSE) also has the notice for the View derived from [Commits](https://github.com/jdkato/commits). It has the notices for the rules derived from [vale-ai-tells](https://github.com/krishnasunkam/vale-ai-tells), [Std](https://github.com/vale-cli/Std), [proselint](https://github.com/vale-cli/proselint), and the [Vale Harper style](https://github.com/vale-cli/Harper).
+MIT. [LICENSE](LICENSE) also has the notice for the View derived from [Commits](https://github.com/jdkato/commits). It has the notices for the rules derived from [vale-ai-tells](https://github.com/krishnasunkam/vale-ai-tells), [Std](https://github.com/vale-cli/Std), [proselint](https://github.com/vale-cli/proselint), [write-good](https://github.com/errata-ai/write-good), and the [Vale Harper style](https://github.com/vale-cli/Harper).
