@@ -35,6 +35,7 @@
     "NPROCESSORS",
     "nullary",
     "ONLN",
+    "pathspecs",
     "Rakefile",
     "rawfile",
     "rdjsonl",

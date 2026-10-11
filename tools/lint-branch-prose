@@ -17,13 +17,14 @@ readonly DEFAULT_LIMIT=40
 
 usage() {
   cat <<EOF
-usage: ${PROG} [--base <ref>] [--limit <n>]
+usage: ${PROG} [--base <ref>] [--limit <n>] [<path>...]
        ${PROG} -h
 
 Lint the prose this branch added, uncommitted edits to tracked files included.
 Vale reads the comments in a source file and the whole of a markdown file.
 Alerts on lines the branch did not touch are dropped, so an old comment in a
-file you edited stays out of the report.
+file you edited stays out of the report. Name paths to lint only what the
+branch added to them. A directory is walked.
 
   --base <ref>   compare against <ref> rather than the default branch
   --limit <n>    print at most <n> alerts, 0 for all (default ${DEFAULT_LIMIT})
@@ -33,8 +34,8 @@ Past the limit it prints a count per rule instead of the rest. One rule with
 hundreds of hits is a question about that rule, not about hundreds of lines.
 
 Exit 0 when clean, 1 when it reports an alert, and a sysexits(3) code on
-failure: 64 on a usage error or outside a repository, 69 when git or vale is
-missing, 70 when git fails.
+failure: 64 on a usage error or outside a repository, 66 when a path doesn't
+exist, 69 when git or vale is missing, 70 when git fails.
 EOF
 }
 
@@ -97,15 +98,17 @@ main() {
     shift
   done
 
-  [[ $# -eq 0 ]] || usage_error "expected no operands, got $#"
-
   command -v git >/dev/null || die "${EX_UNAVAILABLE}" 'git is required'
   command -v vale >/dev/null || die "${EX_UNAVAILABLE}" 'vale is required'
 
   local root
   root="$(git rev-parse --show-toplevel 2>/dev/null)" \
     || die "${EX_USAGE}" 'not inside a git repository'
-  cd "${root}"
+
+  local operand
+  for operand in "$@"; do
+    [[ -e "${operand}" ]] || die "${EX_NOINPUT}" "no such path '${operand}'"
+  done
 
   [[ -n "${base}" ]] || base="$(default_base)"
   git rev-parse --verify --quiet "${base}" >/dev/null \
@@ -118,11 +121,15 @@ main() {
     || die "${EX_SOFTWARE}" "no common ancestor with '${base}'"
 
   # Capture before the loop. A process substitution hides git's exit status,
-  # so a failed diff would read as an empty file list and report clean.
+  # so a failed diff would give an empty file list and report clean.
   # --diff-filter=d drops a deleted file, which has no lines left to lint.
+  # The operands start from the caller's directory, so the diff runs there.
+  # --no-relative stops diff.relative from printing the files from there too.
   local changed
-  changed="$(git diff --name-only --diff-filter=d "${fork}")" \
+  changed="$(git --literal-pathspecs diff --name-only --no-relative \
+    --diff-filter=d "${fork}" -- "$@")" \
     || die "${EX_SOFTWARE}" "git diff against '${base}' failed"
+  cd "${root}"
 
   local -a files=()
   local line

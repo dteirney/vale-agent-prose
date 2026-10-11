@@ -39,6 +39,11 @@ lint_branch() {
   "${REPO}/tools/lint-branch-prose" "$@"
 }
 
+commit_all() {
+  git -C "${WORK}" add -A
+  git -C "${WORK}" -c user.name=t -c user.email=t@t commit -qm "$1"
+}
+
 @test "lint-prose walks a directory and exits 1 on an alert" {
   mkdir "${WORK}/docs"
   printf '%s\n' "${TRIAD}" >"${WORK}/docs/a.md"
@@ -177,7 +182,98 @@ lint_branch() {
   [[ "${output}" != *'Alerts by rule:'* ]]
 }
 
-@test "lint-branch-prose with an operand is a usage error" {
-  run lint_branch README.md
-  [ "${status}" -eq 64 ]
+@test "lint-branch-prose with a path reports only that file's added lines" {
+  git -C "${WORK}" init -q
+  printf '%s\n' "${TRIAD}" >"${WORK}/a.md"
+  printf 'Run the gate.\n' >"${WORK}/b.md"
+  commit_all base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/a.md"
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/b.md"
+  cd "${WORK}"
+  run --separate-stderr lint_branch --base HEAD a.md
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'a.md:3:'*'AgentProse.AbstractTriad'* ]]
+  [[ "${output}" != *'a.md:1:'* ]]
+  [[ "${output}" != *'b.md'* ]]
+}
+
+@test "lint-branch-prose with a path the branch didn't change exits 0 and says nothing" {
+  git -C "${WORK}" init -q
+  printf '%s\n' "${TRIAD}" >"${WORK}/a.md"
+  printf 'Run the gate.\n' >"${WORK}/b.md"
+  commit_all base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/b.md"
+  cd "${WORK}"
+  run lint_branch --base HEAD a.md
+  [ "${status}" -eq 0 ]
+  [ -z "${output}" ]
+}
+
+@test "lint-branch-prose with a missing path exits with no input" {
+  git -C "${WORK}" init -q
+  cd "${WORK}"
+  run lint_branch nothing-here
+  [ "${status}" -eq 66 ]
+}
+
+@test "lint-branch-prose reads a path from the directory it runs in" {
+  git -C "${WORK}" init -q
+  mkdir "${WORK}/docs"
+  printf 'Run the gate.\n' >"${WORK}/docs/a.md"
+  commit_all base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/docs/a.md"
+  cd "${WORK}/docs"
+  run --separate-stderr lint_branch --base HEAD a.md
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'docs/a.md:3:'*'AgentProse.AbstractTriad'* ]]
+}
+
+@test "lint-branch-prose with a directory lints every file under it" {
+  git -C "${WORK}" init -q
+  mkdir "${WORK}/docs"
+  printf 'Run the gate.\n' >"${WORK}/docs/a.md"
+  printf 'Run the gate.\n' >"${WORK}/b.md"
+  commit_all base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/docs/a.md"
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/b.md"
+  cd "${WORK}"
+  run --separate-stderr lint_branch --base HEAD docs
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'docs/a.md:3:'* ]]
+  [[ "${output}" != *'b.md'* ]]
+}
+
+@test "lint-branch-prose with a path keeps --base and --limit" {
+  git -C "${WORK}" init -q
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  printf 'Run the gate.\n' >"${WORK}/b.md"
+  commit_all base
+  printf '\n%s\n\n%s\n' "${TRIAD}" "${TRIAD}" >>"${WORK}/a.md"
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/b.md"
+  commit_all added
+  cd "${WORK}"
+  run --separate-stderr lint_branch --base HEAD~1 --limit 1 a.md
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'[1 more alerts'* ]]
+  [[ "${output}" == *'Alerts by rule:'* ]]
+}
+
+@test "lint-branch-prose with no path lints every file the branch changed" {
+  git -C "${WORK}" init -q
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  printf 'Run the gate.\n' >"${WORK}/b.md"
+  commit_all base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/a.md"
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/b.md"
+  cd "${WORK}"
+  run --separate-stderr lint_branch --base HEAD
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'a.md:3:'* ]]
+  [[ "${output}" == *'b.md:3:'* ]]
+}
+
+@test "lint-branch-prose --help shows the paths in its usage line" {
+  run lint_branch --help
+  [ "${status}" -eq 0 ]
+  [[ "${lines[0]}" == *'[<path>...]'* ]]
 }
