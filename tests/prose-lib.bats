@@ -102,7 +102,7 @@ gate_extensions() {
 a.md:3:10: note: replace 'config' with 'configuration' or 'configurations'" ]
 }
 
-@test "a cspell alert names its word" {
+@test "an unknown word prints with the word cspell flagged" {
   run prose::gnu_alerts <<<$'a.md:7:16:cspell:Unknown word\t\tgate'
   [ "${output}" = "a.md:7:16: unknown word: 'gate' [cspell]" ]
 }

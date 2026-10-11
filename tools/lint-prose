@@ -39,11 +39,11 @@ glob before ${PROG} sees it, so a pattern works as a list of paths.
 Past the limit it prints a count per rule instead of the rest. One rule with
 hundreds of hits is a question about that rule, not about hundreds of lines.
 
-Exit 0 when clean, 1 when it finds an alert, and a sysexits(3) code on
-failure: 64 on a usage error, 66 when a path or the data directory doesn't
-exist, 69 when vale is missing, 74 when a directory can't be walked, 78 when
-Vale can't load a config. --by-file leaves out cspell alerts but still exits 1
-on them.
+Exit 0 when clean, 1 when it finds an alert or an unknown word, and a
+sysexits(3) code on failure: 64 on a usage error, 66 when a path or the data
+directory doesn't exist, 69 when vale is missing, 74 when a directory can't be
+walked, 78 when Vale can't load a config. --by-file leaves out unknown words
+but still exits 1 on them.
 EOF
 }
 

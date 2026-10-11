@@ -19,7 +19,7 @@ Where the user named no paths, ask which paths to fix. Run the lint over the pat
 Each stdout line is `<count> <path>`, highest count first. Read only that list. Then branch on the exit code:
 
 - **0:** the paths have no alerts. Tell the user and stop.
-- **1 with no lines:** every alert is a spelling alert, which this skill leaves alone. Tell the user and stop.
+- **1 with no lines:** the lint found only unknown words, which this skill leaves alone. Tell the user and stop.
 - **1 with lines:** go to step 2.
 - **Anything else:** show the user the stderr and the exit code, and stop.
 
@@ -63,7 +63,7 @@ For each alert:
 3. Where you fix the line, compare the old and the new line and say what each asserts. Revert where the new one asserts something the old one didn't, or drops a condition the old one had.
 4. Where you leave the line, quote the words that carry your reason, or name the file or command you checked. A restatement of the rule's message isn't a reason.
 
-Leave each `[cspell]` alert as it stands. Spelling is out of scope, and a rewrite to get past it renames something.
+A line ending `[cspell]` is an unknown word, not an alert. Leave it as it stands. Spelling is out of scope, and a rewrite to get past it renames something.
 
 After each edit, the prose hook lints the paragraph you changed and hands back any alert still in it. That feedback is your second lint: act on it, and run the lint command once only.
 

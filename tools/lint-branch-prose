@@ -39,11 +39,11 @@ the directory you run ${PROG} in, so you can pass that path back.
 Past the limit it prints a count per rule instead of the rest. One rule with
 hundreds of hits is a question about that rule, not about hundreds of lines.
 
-Exit 0 when clean, 1 when it reports an alert, and a sysexits(3) code on
-failure: 64 on a usage error, outside a repository or with a path outside it,
-66 when a path or the data directory doesn't exist, 69 when git or vale is
-missing, 70 when git fails, 78 when Vale can't load a config. --by-file leaves
-out cspell alerts but still exits 1 on them.
+Exit 0 when clean, 1 when it reports an alert or an unknown word, and a
+sysexits(3) code on failure: 64 on a usage error, outside a repository or with
+a path outside it, 66 when a path or the data directory doesn't exist, 69 when
+git or vale is missing, 70 when git fails, 78 when Vale can't load a config.
+--by-file leaves out unknown words but still exits 1 on them.
 EOF
 }
 

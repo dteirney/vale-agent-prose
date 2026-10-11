@@ -114,7 +114,7 @@ data_dir() {
   [[ "${lines[0]}" =~ ^\ *1\ mixed\.md$ ]]
 }
 
-@test "lint-prose --by-file exits 1 when every alert is cspell's, and prints nothing" {
+@test "lint-prose --by-file exits 1 when it finds only unknown words, and prints nothing" {
   printf 'Run the gaet.\n' >"${WORK}/a.md"
   cd "${WORK}"
   run --separate-stderr lint_prose --by-file a.md
@@ -435,7 +435,7 @@ data_dir() {
   [ -z "${output}" ]
 }
 
-@test "lint-branch-prose --by-file exits 1 when every alert is cspell's, and prints nothing" {
+@test "lint-branch-prose --by-file exits 1 when it finds only unknown words, and prints nothing" {
   git -C "${WORK}" init -q
   printf 'Run the gate.\n' >"${WORK}/a.md"
   commit_all base
