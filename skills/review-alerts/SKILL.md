@@ -23,7 +23,7 @@ Show the user its output and its exit code. Then branch:
 
 ## 2. Judge each printed alert
 
-Give every persisted alert in the report one verdict: **false positive** or **rule right**. Judge it with the [padding test](../padding-test.md). Padding means the rule was right, and words doing work mean a false positive. A metric rule flags no words, so [When the rule is the problem](when-the-rule-is-the-problem.md) covers its alerts.
+Give every persisted alert in the report one verdict: **false positive** or **rule right**. Judge it with the [padding test](../padding-test.md). Padding means the rule was right, and words doing work mean a false positive. A metric rule flags no words, so [When the rule is the problem](when-the-rule-is-the-problem.md) covers its alerts. Where that file says to run the lint, run `"${CLAUDE_PLUGIN_ROOT}/tools/lint-prose" --data-dir "${CLAUDE_PLUGIN_DATA}"`.
 
 Judge from the line the report prints, and the lines around it. The `>` marks the alert's line. The file may have changed since the edit, and the printed line is what Vale saw.
 
