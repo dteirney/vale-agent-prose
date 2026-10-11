@@ -237,7 +237,22 @@ commit_all() {
   cd "${WORK}/docs"
   run --separate-stderr lint_branch --base HEAD a.md
   [ "${status}" -eq 1 ]
-  [[ "${output}" == *'docs/a.md:3:'*'AgentProse.AbstractTriad'* ]]
+  grep -q '^a\.md:3:.*AgentProse\.AbstractTriad' <<<"${output}"
+}
+
+@test "lint-branch-prose prints each path from the directory it runs in" {
+  git -C "${WORK}" init -q
+  mkdir "${WORK}/docs"
+  printf 'Run the gate.\n' >"${WORK}/docs/a.md"
+  printf 'Run the gate.\n' >"${WORK}/b.md"
+  commit_all base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/docs/a.md"
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/b.md"
+  cd "${WORK}/docs"
+  run --separate-stderr lint_branch --base HEAD
+  [ "${status}" -eq 1 ]
+  grep -q '^a\.md:3:' <<<"${output}"
+  grep -q '^\.\./b\.md:3:' <<<"${output}"
 }
 
 @test "lint-branch-prose with a directory lints every file under it" {

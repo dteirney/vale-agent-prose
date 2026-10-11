@@ -24,7 +24,8 @@ Lint the prose this branch added, uncommitted edits to tracked files included.
 Vale reads the comments in a source file and the whole of a markdown file.
 Alerts on lines the branch did not touch are dropped, so an old comment in a
 file you edited stays out of the report. Name paths to lint only what the
-branch added to them. A directory is walked.
+branch added to them. A directory is walked. Each alert names its file from
+the directory you run ${PROG} in, so you can pass that path back.
 
   --base <ref>   compare against <ref> rather than the default branch
   --limit <n>    print at most <n> alerts, 0 for all (default ${DEFAULT_LIMIT})
@@ -62,6 +63,36 @@ default_base() {
     fi
   done
   die "${EX_USAGE}" 'no default branch found, so pass --base <ref>'
+}
+
+# Print the alerts on stdin with each path relative to directory $1, not to the
+# repository root. A path then works as an operand to this command.
+relative_paths() {
+  local dir="$1" alerts
+  alerts="$(cat)"
+
+  local paths
+  paths="$(awk -F: '!seen[$1]++ { print $1 }' <<<"${alerts}")"
+
+  local map='' path shown
+  while IFS= read -r path; do
+    shown="$(git -C "${dir}" ls-files -z -- ":(top,literal)${path}" \
+      | tr -d '\0')" || return 1
+    map+="${path}"$'\t'"${shown:-${path}}"$'\n'
+  done <<<"${paths}"
+
+  # ENVIRON, because awk -v reads a backslash in a path as an escape.
+  PROSE_MAP="${map}" awk '
+    BEGIN {
+      count = split(ENVIRON["PROSE_MAP"], rows, "\n")
+      for (k = 1; k <= count; k++)
+        if (split(rows[k], f, "\t") == 2) to[f[1]] = f[2]
+    }
+    {
+      i = index($0, ":")
+      path = substr($0, 1, i - 1)
+      print ((path in to) ? to[path] : path) substr($0, i)
+    }' <<<"${alerts}"
 }
 
 main() {
@@ -131,6 +162,7 @@ main() {
   changed="$(git --literal-pathspecs diff --name-only --no-relative \
     --diff-filter=d "${fork}" -- "$@")" \
     || die "${EX_SOFTWARE}" "git diff against '${base}' failed"
+  local cwd="${PWD}"
   cd "${root}"
 
   local -a files=()
@@ -152,6 +184,10 @@ main() {
     || die "${EX_SOFTWARE}" 'git diff failed while filtering the alerts'
 
   [[ -n "${alerts}" ]] || return 0
+
+  # shellcheck disable=SC2310  # it returns 1 itself when git fails
+  alerts="$(relative_paths "${cwd}" <<<"${alerts}")" \
+    || die "${EX_SOFTWARE}" 'git ls-files failed while naming the files'
 
   prose::report "${limit}" "${alerts}"
   return 1
