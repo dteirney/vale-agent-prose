@@ -1,0 +1,42 @@
+{
+  "skill_name": "fix-prose",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/vale-agent-prose:fix-prose docs/",
+      "expected_output": "The padding alerts in docs/release.md line 3 are fixed. The hedge 'usually' and the abstract triad are each left with a reason that quotes words. The unknown word 'gaet' in docs/hooks.md is untouched. The report lists the rerun's counts and each line left. Nothing is committed.",
+      "files": ["evals/files/mixed-folder"],
+      "expectations": [
+        "docs/release.md no longer has 'will' or 'simply' on its line 3 sentence",
+        "docs/hooks.md still has the word 'gaet'",
+        "The repository has no commit beyond the base commit",
+        "One subagent started for each of the two files with alerts",
+        "The final reply lists the rerun's count for each file",
+        "Each alert the final reply says was left has a reason that quotes words from the line or names a check"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/vale-agent-prose:fix-prose docs/",
+      "expected_output": "The repository's Vale configuration lists the package but hasn't synced it. The lint exits 0 with a warning that the configuration names no styles. The reply shows the warning and says the result isn't evidence the prose is clean. No file changes and no subagent starts.",
+      "files": ["evals/files/unsynced-package"],
+      "expectations": [
+        "No file in the repository changed",
+        "No subagent started",
+        "The final reply shows the warning that the configuration names no styles",
+        "The final reply says the result isn't evidence the prose is clean"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/vale-agent-prose:fix-prose docs/",
+      "expected_output": "The only finding is the unknown word 'gaet'. The lint exits 1 with no lines. The reply says only unknown words were found. No file changes and no subagent starts.",
+      "files": ["evals/files/unknown-words-only"],
+      "expectations": [
+        "No file in the repository changed",
+        "No subagent started",
+        "The final reply says the lint found only unknown words, which the skill leaves alone"
+      ]
+    }
+  ]
+}

@@ -8,3 +8,6 @@
 
 # The local issue tracker. Its issues and specs stay on the machine that wrote them.
 /.scratch/
+
+# skill-creator's runs of a skill's test cases. The test cases themselves are tracked.
+/skills/*/evals/workspace/

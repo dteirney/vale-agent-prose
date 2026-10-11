@@ -21,6 +21,7 @@
     "EDITMSG",
     "endswith",
     "errorformat",
+    "evals",
     "Flesch",
     "GDAL",
     "getconf",
@@ -67,7 +68,12 @@
   // A fixture is a copy of what Claude Code wrote, ids and field names included.
   // cspell reads the synced styles despite .gitignore, whose re-include of the
   // vocabulary it doesn't apply as git does.
-  "ignorePaths": [".git/**", "tests/fixtures/**", "styles/**"],
+  "ignorePaths": [
+    ".git/**",
+    "tests/fixtures/**",
+    "skills/*/evals/**",
+    "styles/**",
+  ],
 
   "overrides": [
     // A command and a git hook have no extension, so they get no language, the
