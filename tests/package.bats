@@ -80,6 +80,12 @@ lint() {
   [[ "${output}" != *'Google.EmDash'* ]]
 }
 
+@test "three em dashes in a paragraph report only the rewrites" {
+  run lint 'The gate — the final check — passed, and the hook — the first — ran.'
+  [[ "${output}" == *'AiTells.Dash'* ]]
+  [[ "${output}" != *'Slop.EmDash'* ]]
+}
+
 @test "a sentence opening with there is names the fix" {
   run lint 'There is no lock file in the repository.'
   [[ "${output}" == *"AgentProse.ThereIs:'There is' opens the sentence: make the thing that exists its subject."* ]]
@@ -89,6 +95,12 @@ lint() {
 @test "a sentence opening with there's is caught" {
   run lint "There's no lock file in the repository."
   [[ "${output}" == *"AgentProse.ThereIs:'There's'"* ]]
+}
+
+@test "an ellipsis reports once" {
+  run lint 'The build stalls... then it passes.'
+  [[ "${output}" == *'Std.Punctuation.Ellipses'* ]]
+  [ "$(grep -c -i 'ellipsis\|ellipses' <<<"${output}")" -eq 1 ]
 }
 
 @test "an inanimate subject taking an active verb is caught" {
