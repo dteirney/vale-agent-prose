@@ -59,7 +59,7 @@ Each alert is one line, `file:line:column: message [rule]`. Some name the flagge
 For each alert:
 
 1. Read the line, and the one before it. The rule matched a span, and the claim is usually wider than the span.
-2. Ask whether the line has the defect the alert names. Delete the flagged words in your head and read the line back. Where it still says the same thing, the words were padding: fix the line. Where the meaning moved, the words were doing work: leave the line. A rule flags "usually" in "a hedge is usually the point" as a filler adverb. Without it the line claims more than the writer meant, so it stays. The same rule flags "just" in "just check the output", which says nothing, so it goes.
+2. Ask whether the line has the defect the alert names, with the padding test in "${CLAUDE_PLUGIN_ROOT}/skills/padding-test.md". Where the words were padding, fix the line. Where they were doing work, leave the line.
 3. Where you fix the line, compare the old and the new line and say what each asserts. Revert where the new one asserts something the old one didn't, or drops a condition the old one had.
 4. Where you leave the line, quote the words that carry your reason, or name the file or command you checked. A restatement of the rule's message isn't a reason.
 

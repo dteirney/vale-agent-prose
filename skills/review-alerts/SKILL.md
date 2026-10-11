@@ -23,7 +23,7 @@ Show the user its output and its exit code. Then branch:
 
 ## 2. Judge each printed alert
 
-Give every persisted alert in the report one verdict: **false positive** or **rule right**. Ask one question: is the line worse for the flagged words? Delete them in your head and read the line back. Where it still says the same thing, the words were padding and the rule was right. Where the meaning moved, the words were doing work and the alert is a false positive. A metric rule grades the whole file and flags no words, so [When the rule is the problem](when-the-rule-is-the-problem.md) covers its alerts.
+Give every persisted alert in the report one verdict: **false positive** or **rule right**. Judge it with the [padding test](../padding-test.md). Padding means the rule was right, and words doing work mean a false positive. A metric rule flags no words, so [When the rule is the problem](when-the-rule-is-the-problem.md) covers its alerts.
 
 Judge from the line the report prints, and the lines around it. The `>` marks the alert's line. The file may have changed since the edit, and the printed line is what Vale saw.
 
@@ -92,4 +92,3 @@ The review lists the configuration each repository used. A repository that lists
   Tell the user to run the setup skill in that repository after adding it, which syncs the styles it names.
 
 **Done when:** every printed persisted alert has a verdict and a reason. Every false positive has a sort. Every package-wide rule has a drafted issue, and every repository-only false positive has its lines. You've filed no issue and edited no file.
-
