@@ -17,7 +17,7 @@ readonly DEFAULT_LIMIT=40
 
 usage() {
   cat <<EOF
-usage: ${PROG} [--base <ref>] [--limit <n>] [--by-file] [<path>...]
+usage: ${PROG} [--base <ref>] [--limit <n>] [--by-file] [--data-dir <dir>] [<path>...]
        ${PROG} -h
 
 Lint the prose this branch added, uncommitted edits to tracked files included.
@@ -27,19 +27,23 @@ file you edited stays out of the report. Name paths to lint only what the
 branch added to them. A directory is walked. Each alert names its file from
 the directory you run ${PROG} in, so you can pass that path back.
 
-  --base <ref>   compare against <ref> rather than the default branch
-  --limit <n>    print at most <n> alerts, 0 for all (default ${DEFAULT_LIMIT})
-  --by-file      print only '<count> <path>' for each file with a Vale alert,
-                 highest count first, and every file whatever the limit
-  -h, --help     print this and exit
+  --base <ref>      compare against <ref> rather than the default branch
+  --limit <n>       print at most <n> alerts, 0 for all (default ${DEFAULT_LIMIT})
+  --by-file         print only '<count> <path>' for each file with a Vale
+                    alert, highest count first, and every file whatever the
+                    limit
+  --data-dir <dir>  where Vale finds no config in the repository, use the
+                    default one in <dir>, the plugin's data directory
+  -h, --help        print this and exit
 
 Past the limit it prints a count per rule instead of the rest. One rule with
 hundreds of hits is a question about that rule, not about hundreds of lines.
 
 Exit 0 when clean, 1 when it reports an alert, and a sysexits(3) code on
 failure: 64 on a usage error, outside a repository or with a path outside it,
-66 when a path doesn't exist, 69 when git or vale is missing, 70 when git
-fails. --by-file leaves out cspell alerts but still exits 1 on them.
+66 when a path or the data directory doesn't exist, 69 when git or vale is
+missing, 70 when git fails. --by-file leaves out cspell alerts but still exits
+1 on them.
 EOF
 }
 
@@ -102,6 +106,7 @@ main() {
   local base=''
   local limit="${DEFAULT_LIMIT}"
   local by_file=0
+  local data_dir=''
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -h | --help)
@@ -109,6 +114,11 @@ main() {
         return 0
         ;;
       --by-file) by_file=1 ;;
+      --data-dir)
+        [[ $# -ge 2 ]] || usage_error '--data-dir needs a directory'
+        data_dir="$2"
+        shift
+        ;;
       --base)
         [[ $# -ge 2 ]] || usage_error '--base needs a ref'
         base="$2"
@@ -148,6 +158,12 @@ main() {
       || die "${EX_USAGE}" "'${operand}' is outside the repository"
   done
 
+  # Absolute, because the lint runs from the repository root.
+  if [[ -n "${data_dir}" ]]; then
+    data_dir="$(cd "${data_dir}" 2>/dev/null && pwd)" \
+      || die "${EX_NOINPUT}" "no such directory '${data_dir}'"
+  fi
+
   [[ -n "${base}" ]] || base="$(default_base)"
   git rev-parse --verify --quiet "${base}" >/dev/null \
     || usage_error "unknown ref '${base}'"
@@ -169,6 +185,9 @@ main() {
     || die "${EX_SOFTWARE}" "git diff against '${base}' failed"
   local cwd="${PWD}"
   cd "${root}"
+  if [[ -n "${data_dir}" ]]; then
+    prose::use_default_config "${data_dir}/vale/.vale.ini"
+  fi
 
   local -a files=()
   local line

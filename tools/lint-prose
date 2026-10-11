@@ -21,25 +21,28 @@ readonly DEFAULT_LIMIT=40
 
 usage() {
   cat <<EOF
-usage: ${PROG} [--limit <n>] [--by-file] <path>...
+usage: ${PROG} [--limit <n>] [--by-file] [--data-dir <dir>] <path>...
        ${PROG} -h
 
 Lint the prose in the paths you name. Vale reads the comments in a source file
 and the whole of a markdown file. A directory is walked. Your shell expands a
 glob before ${PROG} sees it, so a pattern works as a list of paths.
 
-  --limit <n>    print at most <n> alerts, 0 for all (default ${DEFAULT_LIMIT})
-  --by-file      print only '<count> <path>' for each file with a Vale alert,
-                 highest count first, and every file whatever the limit
-  -h, --help     print this and exit
+  --limit <n>       print at most <n> alerts, 0 for all (default ${DEFAULT_LIMIT})
+  --by-file         print only '<count> <path>' for each file with a Vale
+                    alert, highest count first, and every file whatever the
+                    limit
+  --data-dir <dir>  where Vale finds no config from this directory, use the
+                    default one in <dir>, the plugin's data directory
+  -h, --help        print this and exit
 
 Past the limit it prints a count per rule instead of the rest. One rule with
 hundreds of hits is a question about that rule, not about hundreds of lines.
 
 Exit 0 when clean, 1 when it finds an alert, and a sysexits(3) code on
-failure: 64 on a usage error, 66 when a path doesn't exist, 69 when vale is
-missing, 74 when a directory can't be walked. --by-file leaves out cspell
-alerts but still exits 1 on them.
+failure: 64 on a usage error, 66 when a path or the data directory doesn't
+exist, 69 when vale is missing, 74 when a directory can't be walked. --by-file
+leaves out cspell alerts but still exits 1 on them.
 EOF
 }
 
@@ -71,6 +74,7 @@ collect_paths() {
 main() {
   local limit="${DEFAULT_LIMIT}"
   local by_file=0
+  local data_dir=''
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -h | --help)
@@ -78,6 +82,11 @@ main() {
         return 0
         ;;
       --by-file) by_file=1 ;;
+      --data-dir)
+        [[ $# -ge 2 ]] || usage_error '--data-dir needs a directory'
+        data_dir="$2"
+        shift
+        ;;
       --limit)
         [[ $# -ge 2 ]] || usage_error '--limit needs a count'
         [[ "$2" =~ ^[0-9]+$ ]] || usage_error "--limit wants a number, got '$2'"
@@ -102,6 +111,11 @@ main() {
   fi
 
   command -v vale >/dev/null || die "${EX_UNAVAILABLE}" 'vale is required'
+
+  if [[ -n "${data_dir}" ]]; then
+    [[ -d "${data_dir}" ]] || die "${EX_NOINPUT}" "no such directory '${data_dir}'"
+    prose::use_default_config "${data_dir}/vale/.vale.ini"
+  fi
 
   local -a files=()
   local operand out line

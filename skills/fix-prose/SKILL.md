@@ -13,7 +13,7 @@ You hand out files and report. Each subagent fixes one file. Your context window
 Where the user named no paths, ask which paths to fix. Run the lint over the paths the user named:
 
 ```sh
-"${CLAUDE_PLUGIN_ROOT}/tools/lint-prose" --by-file <paths>
+"${CLAUDE_PLUGIN_ROOT}/tools/lint-prose" --data-dir "${CLAUDE_PLUGIN_DATA}" --by-file <paths>
 ```
 
 Each stdout line is `<count> <path>`, highest count first. Read only that list. Then branch on the exit code:
@@ -45,14 +45,14 @@ Leave the rewrites uncommitted, for the user to review.
 
 ## The subagent brief
 
-Fill in `<path>`, and write the lint command with the plugin's path spelled out.
+Fill in `<path>`, and write the lint command with the plugin's paths spelled out.
 
 ```text
 Fix the prose in one file: <path>.
 
 Lint it:
 
-    "${CLAUDE_PLUGIN_ROOT}/tools/lint-prose" --limit 0 <path>
+    "${CLAUDE_PLUGIN_ROOT}/tools/lint-prose" --data-dir "${CLAUDE_PLUGIN_DATA}" --limit 0 <path>
 
 Each alert is one line, `file:line:column: message [rule]`. Some name the flagged words before the rule, and some end with a link. A `note:` line under an alert offers a replacement. An alert says a line matched a pattern. It doesn't say the line is wrong.
 

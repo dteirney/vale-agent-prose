@@ -44,6 +44,14 @@ commit_all() {
   git -C "${WORK}" -c user.name=t -c user.email=t@t commit -qm "$1"
 }
 
+# A plugin data directory whose default config reads the synced styles, and no
+# Vale config for the commands to find on their own.
+data_dir() {
+  mkdir -p "${WORK}/data/vale"
+  printf 'StylesPath = %s/styles\n' "${CONSUMER}" >"${WORK}/data/vale/.vale.ini"
+  unset VALE_CONFIG_PATH
+}
+
 @test "lint-prose walks a directory and exits 1 on an alert" {
   mkdir "${WORK}/docs"
   printf '%s\n' "${TRIAD}" >"${WORK}/docs/a.md"
@@ -138,6 +146,45 @@ commit_all() {
   run lint_prose --help
   [ "${status}" -eq 0 ]
   [[ "${output}" == *'--by-file'* ]]
+}
+
+@test "lint-prose --data-dir lints a directory with no Vale config through the default one" {
+  data_dir
+  mkdir "${WORK}/docs"
+  printf '%s\n' "${TRIAD}" >"${WORK}/docs/a.md"
+  cd "${WORK}/docs"
+  run --separate-stderr lint_prose --data-dir "${WORK}/data" --by-file a.md
+  [ "${status}" -eq 1 ]
+  [[ "${lines[0]}" =~ ^\ *1\ a\.md$ ]]
+}
+
+@test "lint-prose --data-dir leaves a directory's own Vale config in force" {
+  data_dir
+  mkdir "${WORK}/docs"
+  printf 'StylesPath = %s/styles\n[*]\nAgentProse.AbstractTriad = NO\n' \
+    "${CONSUMER}" >"${WORK}/docs/.vale.ini"
+  printf '%s\n' "${TRIAD}" >"${WORK}/docs/a.md"
+  cd "${WORK}/docs"
+  run lint_prose --data-dir "${WORK}/data" a.md
+  [[ "${output}" != *'AgentProse.AbstractTriad'* ]]
+}
+
+@test "lint-prose --data-dir with no directory after it is a usage error" {
+  run lint_prose --data-dir
+  [ "${status}" -eq 64 ]
+}
+
+@test "lint-prose --data-dir with a missing directory exits with no input" {
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  run --separate-stderr lint_prose --data-dir "${WORK}/nothing-here" "${WORK}/a.md"
+  [ "${status}" -eq 66 ]
+  [[ "${stderr}" == *"no such directory '${WORK}/nothing-here'"* ]]
+}
+
+@test "lint-prose --help describes --data-dir" {
+  run lint_prose --help
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *'--data-dir <dir>'* ]]
 }
 
 @test "lint-prose with no operand is a usage error" {
@@ -379,6 +426,47 @@ commit_all() {
   run --separate-stderr lint_branch --base HEAD --limit 1 --by-file
   [ "${status}" -eq 1 ]
   [ "${#lines[@]}" -eq 2 ]
+}
+
+@test "lint-branch-prose --data-dir lints a repository with no Vale config through the default one" {
+  data_dir
+  mkdir "${WORK}/repo"
+  git -C "${WORK}/repo" init -q
+  printf 'Run the gate.\n' >"${WORK}/repo/a.md"
+  git -C "${WORK}/repo" add a.md
+  git -C "${WORK}/repo" -c user.name=t -c user.email=t@t commit -qm base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/repo/a.md"
+  cd "${WORK}/repo"
+  run --separate-stderr lint_branch --base HEAD --data-dir "${WORK}/data"
+  [ "${status}" -eq 1 ]
+  [[ "${output}" == *'a.md:3:'*'AgentProse.AbstractTriad'* ]]
+}
+
+@test "lint-branch-prose --data-dir reads a relative directory from where it runs" {
+  data_dir
+  mkdir -p "${WORK}/repo/docs"
+  git -C "${WORK}/repo" init -q
+  printf 'Run the gate.\n' >"${WORK}/repo/docs/a.md"
+  git -C "${WORK}/repo" add docs/a.md
+  git -C "${WORK}/repo" -c user.name=t -c user.email=t@t commit -qm base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/repo/docs/a.md"
+  cd "${WORK}/repo/docs"
+  run --separate-stderr lint_branch --base HEAD --data-dir ../../data --by-file
+  [ "${status}" -eq 1 ]
+  [[ "${lines[0]}" =~ ^\ *1\ a\.md$ ]]
+}
+
+@test "lint-branch-prose --data-dir with a missing directory exits with no input" {
+  git -C "${WORK}" init -q
+  cd "${WORK}"
+  run lint_branch --data-dir "${WORK}/nothing-here"
+  [ "${status}" -eq 66 ]
+}
+
+@test "lint-branch-prose --help describes --data-dir" {
+  run lint_branch --help
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *'--data-dir <dir>'* ]]
 }
 
 @test "lint-branch-prose --help describes --by-file" {
