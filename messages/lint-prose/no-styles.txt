@@ -1,0 +1,1 @@
+The Vale configuration here names no styles, so only the rules it switches on one by one ran. Where it lists a package, run /vale-agent-prose:setup to sync it.

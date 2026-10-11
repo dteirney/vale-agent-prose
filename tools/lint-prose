@@ -132,6 +132,10 @@ main() {
 
   # shellcheck disable=SC2310  # it prints its own reason
   prose::config_loads || exit "${EX_CONFIG}"
+  # shellcheck disable=SC2310  # a predicate
+  if prose::names_no_style; then
+    prose::message lint-prose/no-styles >&2
+  fi
 
   [[ ${#files[@]} -gt 0 ]] || return 0
 

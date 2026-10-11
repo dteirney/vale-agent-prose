@@ -217,6 +217,25 @@ data_dir() {
   [[ "${stderr}" == *'no-such-styles'* ]]
 }
 
+@test "lint-prose with an unsynced package warns that its config names no styles" {
+  unset VALE_CONFIG_PATH
+  printf 'StylesPath = styles\nPackages = %s/package\n' "${REPO}" >"${WORK}/.vale.ini"
+  mkdir "${WORK}/styles"
+  printf '%s\n' "${TRIAD}" >"${WORK}/a.md"
+  cd "${WORK}"
+  run --separate-stderr lint_prose a.md
+  [ "${status}" -eq 0 ]
+  [ -z "${output}" ]
+  [[ "${stderr}" == *'names no styles'*'/vale-agent-prose:setup'* ]]
+}
+
+@test "lint-prose with synced styles warns nothing" {
+  printf '%s\n' "${TRIAD}" >"${WORK}/a.md"
+  run --separate-stderr lint_prose "${WORK}/a.md"
+  [ "${status}" -eq 1 ]
+  [ -z "${stderr}" ]
+}
+
 @test "lint-prose with no operand is a usage error" {
   run lint_prose
   [ "${status}" -eq 64 ]
@@ -504,6 +523,20 @@ data_dir() {
   [ "${status}" -eq 78 ]
   [ -z "${output}" ]
   [[ "${stderr}" == *'--data-dir'* ]]
+}
+
+@test "lint-branch-prose with an unsynced package warns that its config names no styles" {
+  unset VALE_CONFIG_PATH
+  git -C "${WORK}" init -q
+  printf 'StylesPath = styles\nPackages = %s/package\n' "${REPO}" >"${WORK}/.vale.ini"
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  commit_all base
+  mkdir "${WORK}/styles"
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/a.md"
+  cd "${WORK}"
+  run --separate-stderr lint_branch --base HEAD
+  [ "${status}" -eq 0 ]
+  [[ "${stderr}" == *'names no styles'* ]]
 }
 
 @test "lint-branch-prose --help describes --data-dir" {

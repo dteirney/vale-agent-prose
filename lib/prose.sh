@@ -110,6 +110,15 @@ prose::config_loads() {
   return 1
 }
 
+# Whether the Vale configuration in force names no style it can load. An
+# unsynced package isn't an error to Vale: it loads, names no styles, and
+# reports nothing on every file.
+# shellcheck disable=SC2312  # the caller only reads the status
+prose::names_no_style() {
+  vale --no-global ls-config 2>/dev/null \
+    | jq -e '(.SBaseStyles | length) == 0 and .GBaseStyles == null' >/dev/null
+}
+
 # $1 is a cspell configuration file to add, or empty. The rest are paths, which cspell
 # reads as globs against the working directory, so an absolute path outside
 # it matches nothing and cspell reports "Files checked: 0" rather than an
