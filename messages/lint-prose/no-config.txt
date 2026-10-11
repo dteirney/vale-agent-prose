@@ -1,0 +1,1 @@
+Vale finds no configuration from this directory, so nothing got linted. Pass --data-dir with the plugin's data directory to lint with its default configuration. Where that directory has none yet, run /vale-agent-prose:setup.

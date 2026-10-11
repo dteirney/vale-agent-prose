@@ -41,8 +41,9 @@ hundreds of hits is a question about that rule, not about hundreds of lines.
 
 Exit 0 when clean, 1 when it finds an alert, and a sysexits(3) code on
 failure: 64 on a usage error, 66 when a path or the data directory doesn't
-exist, 69 when vale is missing, 74 when a directory can't be walked. --by-file
-leaves out cspell alerts but still exits 1 on them.
+exist, 69 when vale is missing, 74 when a directory can't be walked, 78 when
+Vale can't load a config. --by-file leaves out cspell alerts but still exits 1
+on them.
 EOF
 }
 
@@ -128,6 +129,9 @@ main() {
       fi
     done <<<"${out}"
   done
+
+  # shellcheck disable=SC2310  # it prints its own reason
+  prose::config_loads || exit "${EX_CONFIG}"
 
   [[ ${#files[@]} -gt 0 ]] || return 0
 

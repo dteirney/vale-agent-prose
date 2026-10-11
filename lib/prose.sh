@@ -96,6 +96,20 @@ prose::use_default_config() {
   fi
 }
 
+# Whether Vale loads a configuration from the working directory. Where it
+# can't, say why on stderr. A run without one reports nothing on every file,
+# which reads as clean.
+prose::config_loads() {
+  local err
+  err="$(vale --no-global ls-config 2>&1 >/dev/null)" && return 0
+  if [[ "${err}" == *'no config file found'* ]]; then
+    prose::message lint-prose/no-config >&2
+  else
+    prose::message lint-prose/config-failed "${err}" >&2
+  fi
+  return 1
+}
+
 # $1 is a cspell configuration file to add, or empty. The rest are paths, which cspell
 # reads as globs against the working directory, so an absolute path outside
 # it matches nothing and cspell reports "Files checked: 0" rather than an

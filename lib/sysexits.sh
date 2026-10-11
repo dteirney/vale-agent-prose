@@ -11,3 +11,4 @@ readonly EX_UNAVAILABLE=69
 readonly EX_SOFTWARE=70
 readonly EX_CANTCREAT=73
 readonly EX_IOERR=74
+readonly EX_CONFIG=78

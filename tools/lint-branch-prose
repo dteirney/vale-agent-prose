@@ -42,8 +42,8 @@ hundreds of hits is a question about that rule, not about hundreds of lines.
 Exit 0 when clean, 1 when it reports an alert, and a sysexits(3) code on
 failure: 64 on a usage error, outside a repository or with a path outside it,
 66 when a path or the data directory doesn't exist, 69 when git or vale is
-missing, 70 when git fails. --by-file leaves out cspell alerts but still exits
-1 on them.
+missing, 70 when git fails, 78 when Vale can't load a config. --by-file leaves
+out cspell alerts but still exits 1 on them.
 EOF
 }
 
@@ -188,6 +188,8 @@ main() {
   if [[ -n "${data_dir}" ]]; then
     prose::use_default_config "${data_dir}/vale/.vale.ini"
   fi
+  # shellcheck disable=SC2310  # it prints its own reason
+  prose::config_loads || exit "${EX_CONFIG}"
 
   local -a files=()
   local line

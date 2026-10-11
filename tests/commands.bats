@@ -187,6 +187,36 @@ data_dir() {
   [[ "${output}" == *'--data-dir <dir>'* ]]
 }
 
+@test "lint-prose with no Vale config to find is a configuration error" {
+  unset VALE_CONFIG_PATH
+  printf '%s\n' "${TRIAD}" >"${WORK}/a.md"
+  cd "${WORK}"
+  run --separate-stderr lint_prose a.md
+  [ "${status}" -eq 78 ]
+  [ -z "${output}" ]
+  [[ "${stderr}" == *'--data-dir'* ]]
+}
+
+@test "lint-prose --data-dir with no default config in it is a configuration error" {
+  unset VALE_CONFIG_PATH
+  mkdir "${WORK}/data"
+  printf '%s\n' "${TRIAD}" >"${WORK}/a.md"
+  cd "${WORK}"
+  run --separate-stderr lint_prose --data-dir "${WORK}/data" a.md
+  [ "${status}" -eq 78 ]
+  [[ "${stderr}" == *'/vale-agent-prose:setup'* ]]
+}
+
+@test "lint-prose with a Vale config that can't load is a configuration error" {
+  unset VALE_CONFIG_PATH
+  printf 'StylesPath = no-such-styles\n[*]\nBasedOnStyles = Vale\n' >"${WORK}/.vale.ini"
+  printf '%s\n' "${TRIAD}" >"${WORK}/a.md"
+  cd "${WORK}"
+  run --separate-stderr lint_prose a.md
+  [ "${status}" -eq 78 ]
+  [[ "${stderr}" == *'no-such-styles'* ]]
+}
+
 @test "lint-prose with no operand is a usage error" {
   run lint_prose
   [ "${status}" -eq 64 ]
@@ -461,6 +491,19 @@ data_dir() {
   cd "${WORK}"
   run lint_branch --data-dir "${WORK}/nothing-here"
   [ "${status}" -eq 66 ]
+}
+
+@test "lint-branch-prose with no Vale config to find is a configuration error" {
+  unset VALE_CONFIG_PATH
+  git -C "${WORK}" init -q
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  commit_all base
+  printf '\n%s\n' "${TRIAD}" >>"${WORK}/a.md"
+  cd "${WORK}"
+  run --separate-stderr lint_branch --base HEAD
+  [ "${status}" -eq 78 ]
+  [ -z "${output}" ]
+  [[ "${stderr}" == *'--data-dir'* ]]
 }
 
 @test "lint-branch-prose --help describes --data-dir" {

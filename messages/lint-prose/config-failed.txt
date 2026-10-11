@@ -1,0 +1,2 @@
+Vale can't load the configuration it finds from this directory, so nothing got linted. Vale said this:
+%s
