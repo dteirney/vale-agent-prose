@@ -1,5 +1,10 @@
-# `vale sync` writes here when this repo is used as its own consumer.
-/styles/
+# `vale sync` writes here when this repo is used as its own consumer. The vocabulary is this repo's
+# own, so it stays tracked. Git can't re-include a path under an ignored directory, so each level
+# is ignored by its contents.
+/styles/*
+!/styles/config/
+/styles/config/*
+!/styles/config/vocabularies/
 
 # The local issue tracker. Its issues and specs stay on the machine that wrote them.
 /.scratch/

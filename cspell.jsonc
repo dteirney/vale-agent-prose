@@ -62,7 +62,9 @@
 
   // Only a --dot run reaches in here, and then it reads the whole object store.
   // A fixture is a copy of what Claude Code wrote, ids and field names included.
-  "ignorePaths": [".git/**", "tests/fixtures/**"],
+  // cspell reads the synced styles despite .gitignore, whose re-include of the
+  // vocabulary it doesn't apply as git does.
+  "ignorePaths": [".git/**", "tests/fixtures/**", "styles/**"],
 
   "overrides": [
     // A command and a git hook have no extension, so they get no language, the
