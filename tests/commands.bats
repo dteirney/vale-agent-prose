@@ -299,9 +299,8 @@ data_dir() {
   printf 'Run the gate.\n' >"${WORK}/b.md"
   commit_all base
   printf '\n%s\n' "${TRIAD}" >>"${WORK}/b.md"
-  printf '%s\n' "${TRIAD}" >"${WORK}/untracked.md"
   cd "${WORK}"
-  run lint_branch --base HEAD a.md untracked.md
+  run lint_branch --base HEAD a.md
   [ "${status}" -eq 0 ]
   [ -z "${output}" ]
 }
@@ -311,6 +310,17 @@ data_dir() {
   cd "${WORK}"
   run lint_branch nothing-here
   [ "${status}" -eq 66 ]
+}
+
+@test "lint-branch-prose with a path git doesn't track exits with no input" {
+  git -C "${WORK}" init -q
+  printf 'Run the gate.\n' >"${WORK}/a.md"
+  commit_all base
+  printf '%s\n' "${TRIAD}" >"${WORK}/new.md"
+  cd "${WORK}"
+  run --separate-stderr lint_branch --base HEAD new.md
+  [ "${status}" -eq 66 ]
+  [[ "${stderr}" == *"git doesn't track 'new.md'"* ]]
 }
 
 @test "lint-branch-prose with a path outside the repository is a usage error" {

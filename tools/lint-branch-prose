@@ -41,9 +41,10 @@ hundreds of hits is a question about that rule, not about hundreds of lines.
 
 Exit 0 when clean, 1 when it reports an alert or an unknown word, and a
 sysexits(3) code on failure: 64 on a usage error, outside a repository or with
-a path outside it, 66 when a path or the data directory doesn't exist, 69 when
-git or vale is missing, 70 when git fails, 78 when Vale can't load a config.
---by-file leaves out unknown words but still exits 1 on them.
+a path outside it, 66 when a path or the data directory doesn't exist or git
+doesn't track a path, 69 when git or vale is missing, 70 when git fails, 78
+when Vale can't load a config. --by-file leaves out unknown words but still
+exits 1 on them.
 EOF
 }
 
@@ -156,6 +157,9 @@ main() {
     [[ -e "${operand}" ]] || die "${EX_NOINPUT}" "no such path '${operand}'"
     git --literal-pathspecs ls-files -- "${operand}" >/dev/null 2>&1 \
       || die "${EX_USAGE}" "'${operand}' is outside the repository"
+    git --literal-pathspecs ls-files --error-unmatch -- "${operand}" \
+      >/dev/null 2>&1 \
+      || die "${EX_NOINPUT}" "git doesn't track '${operand}'"
   done
 
   # Absolute, because the lint runs from the repository root.
