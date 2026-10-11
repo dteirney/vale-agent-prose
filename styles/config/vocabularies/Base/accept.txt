@@ -1,3 +1,5 @@
 AgentProse
+Claude Code
 GNU
 MIT
+Vale
