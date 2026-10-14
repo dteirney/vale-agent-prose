@@ -58,6 +58,30 @@ lint_commit() {
   [[ "${output}" != *'QWZX'* ]]
 }
 
+# Google.Exclamation reports the prefix when it survives. A rebase pairs a
+# fixup commit with its target by the exact subject, so rewording isn't a fix.
+@test "a fixup prefix comes off the subject, and the column is the file's" {
+  printf 'fixup! feat: add clarity, discipline, and rigor\n' >"${MSG}"
+  run lint_commit "${MSG}"
+  [[ "${output}" == *':1:18: '*'[AgentProse.AbstractTriad]'* ]]
+  [[ "${output}" != *'Google.Exclamation'* ]]
+}
+
+@test "stacked fixup and squash prefixes all come off the subject" {
+  printf 'fixup! squash! feat: add clarity, discipline, and rigor\n' >"${MSG}"
+  run lint_commit "${MSG}"
+  [[ "${output}" == *'AgentProse.AbstractTriad'* ]]
+  [[ "${output}" != *'Google.Exclamation'* ]]
+}
+
+# An amend commit's message replaces the original's, so its body still lints.
+@test "an amend prefix comes off the subject, and the body still reports" {
+  printf '%s\n\n%s\n' 'amend! fix: tidy the gate' "${BODY}" >"${MSG}"
+  run lint_commit "${MSG}"
+  [[ "${output}" == *'AgentProse.NegDeduction'* ]]
+  [[ "${output}" != *'Google.Exclamation'* ]]
+}
+
 @test "a dotted name in backticks reports nothing in the subject, and a bare one does" {
   printf 'fix: call `config.Load` and config.Load first\n' >"${MSG}"
   run lint_commit "${MSG}"
